@@ -1,0 +1,48 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, de};
+
+pub(crate) fn chrono_string_seconds<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let value = <&str>::deserialize(deserializer)?;
+    let format = if value.contains('.') { "%s.%f" } else { "%s" };
+
+    DateTime::parse_from_str(value, format)
+        .map_err(de::Error::custom)
+        .map(|dt| dt.with_timezone(&Utc))
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::{DateTime, Utc};
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct DateTimeStruct {
+        #[serde(deserialize_with = "super::chrono_string_seconds")]
+        timestamp: DateTime<Utc>,
+    }
+
+    #[test]
+    fn chrono_string_seconds_valid() {
+        let json = r#"{"timestamp": "1695024538"}"#;
+        let result = serde_json::from_str::<DateTimeStruct>(json);
+        assert_eq!(result.unwrap().timestamp.timestamp(), 1_695_024_538);
+
+        let json = r#"{"timestamp": "1695024538.111111"}"#;
+        let result = serde_json::from_str::<DateTimeStruct>(json);
+        assert_eq!(result.unwrap().timestamp.timestamp(), 1_695_024_538);
+    }
+
+    #[test]
+    fn chrono_string_seconds_invalid() {
+        let json = r#"{"timestamp": 1695024538}"#;
+        let result = serde_json::from_str::<DateTimeStruct>(json);
+        assert!(result.is_err());
+
+        let json = r#"{"timestamp": "timestamp"}"#;
+        let result = serde_json::from_str::<DateTimeStruct>(json);
+        assert!(result.is_err());
+    }
+}
