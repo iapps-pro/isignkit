@@ -1,4 +1,5 @@
 mod gbox;
+mod input_file;
 
 use anyhow::Result;
 use clap::Parser;
