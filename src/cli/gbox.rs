@@ -1,4 +1,5 @@
-use super::input_file::{InputFile, InputFileParser};
+use super::gbox_file::GBoxFileReader;
+use super::input_file::{InputFile, InputFileParser, InputFileReader};
 use crate::CliCommand;
 use anyhow::{Context, Result, anyhow};
 use clap::{Parser, ValueEnum};
@@ -34,6 +35,10 @@ pub(crate) struct GBoxCommand {
     #[arg(long, short = 'r')]
     repo_url: Option<String>,
 
+    /// UDID which will be used to make remote requests
+    #[arg(long, short)]
+    udid: Option<String>,
+
     #[arg(value_enum)]
     command: Command,
 
@@ -44,7 +49,8 @@ pub(crate) struct GBoxCommand {
 
 impl CliCommand for GBoxCommand {
     fn run(&self) -> Result<()> {
-        let input = self.repo_json.read_to_string(true)?;
+        let reader = GBoxFileReader::new(self.udid.as_deref());
+        let input = reader.read_to_string(&self.repo_json, true)?;
 
         let keys_storage = CryptKeysStorage::default();
         let keys = keys_storage
@@ -68,7 +74,7 @@ impl CliCommand for GBoxCommand {
                 let mut repo = repo.decrypt(keys)?;
 
                 if let Some(links_map) = &self.links_map {
-                    let links_map = links_map.read_to_string(false)?;
+                    let links_map = reader.read_to_string(links_map, false)?;
                     let links_map = LinksMap::from_encrypted(&links_map, keys)?;
                     repo.normalize_links(&links_map);
                 }

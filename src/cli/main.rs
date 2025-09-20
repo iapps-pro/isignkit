@@ -2,6 +2,7 @@
 #![allow(clippy::missing_errors_doc)]
 
 mod gbox;
+mod gbox_file;
 mod input_file;
 
 use anyhow::Result;

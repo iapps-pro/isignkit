@@ -1,9 +1,9 @@
 use clap::{Arg, Error};
-use std::ffi::OsStr;
-use std::path::PathBuf;
 use std::{
+    ffi::OsStr,
     fs::File,
     io::{read_to_string, stdin},
+    path::PathBuf,
 };
 use url::Url;
 
@@ -34,26 +34,21 @@ impl clap::builder::TypedValueParser for InputFileParser {
     }
 }
 
-impl InputFile {
-    pub(crate) fn read_to_string(&self, stdin_available: bool) -> anyhow::Result<String> {
-        match self {
-            Self::Stdin if stdin_available => Ok(read_to_string(stdin())?),
-            Self::Stdin => Ok(String::new()),
-            Self::Local(path) => {
+pub(crate) trait InputFileReader {
+    fn read_remote(&self, url: &Url) -> anyhow::Result<String>;
+
+    fn read_to_string(&self, file: &InputFile, stdin_available: bool) -> anyhow::Result<String> {
+        match file {
+            InputFile::Stdin if stdin_available => {
+                eprintln!("Waiting for stdin....");
+                Ok(read_to_string(stdin())?)
+            }
+            InputFile::Stdin => Ok(String::new()),
+            InputFile::Local(path) => {
                 let file = File::open(path)?;
                 Ok(read_to_string(file)?)
             }
-            Self::Remote(url) => {
-                let client = reqwest::blocking::Client::new();
-                let contents = client
-                    .get(url.as_str())
-                    .header("User-Agent", "GBox")
-                    .send()?
-                    .error_for_status()?
-                    .text()?;
-
-                Ok(contents)
-            }
+            InputFile::Remote(url) => self.read_remote(url),
         }
     }
 }
