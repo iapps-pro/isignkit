@@ -48,6 +48,32 @@ impl GboxLink {
             Self::Digest(digest) => Self::Digest(digest),
         }
     }
+
+    #[must_use]
+    pub fn to_digest(&self) -> Self {
+        match self {
+            Self::Url(url) => Self::new_digest(url.as_str()),
+            Self::Digest(digest) => Self::Digest(digest.clone()),
+        }
+    }
+
+    #[must_use]
+    pub fn into_string(self) -> String {
+        match self {
+            Self::Url(url) => url.into(),
+            Self::Digest(digest) => digest,
+        }
+    }
+
+    #[must_use]
+    pub fn is_digest(&self) -> bool {
+        matches!(self, Self::Digest(_))
+    }
+
+    #[must_use]
+    pub fn is_url(&self) -> bool {
+        matches!(self, Self::Url(_))
+    }
 }
 
 impl OptionalGboxLink {

@@ -211,29 +211,13 @@ mod tests {
 
     #[test]
     fn decrypt() {
-        let json = r#"
- {
-  "appCategories" : [
-    "工具",
-    "模拟器"
-  ],
-  "sourceUpdateTime" : "2025-09-17T21:26+0300",
-  "sourceAuthor" : "GBox Official",
-  "sourceLinkUrl" : "http:\/\/gbox.run",
-  "sourceDescription" : "GBox官方软件源，源内App均来之互联网，仅用于学习交流。如有冒犯，请联系删除，邮箱：gboxrun@gmail.com",
-  "sourceExportEnable" : true,
-  "version" : "1.0",
-  "sourceName" : "GBox官方软件源",
-  "sourceLinkTitle" : "主页",
-  "sourceImage" : "http:\/\/gbox.run\/Public\/images\/source.png",
-  "appRepositories" : "AwFTq7MS2ugoxvONWXEx7YsBC02jj3liIYAnUneSHqLEWa36snlQ2pe7V0OZNIsCB+h+Jz6gozBtaNfiwO7ytRp2oDvMSIt6liSDBBYPRIhOTxrXyyX7lC04Pel5b0Ku5ai9KJ4A34eggUL\/tl+Q1ORFMXrOL2s9gA80INpUyRCuQzWH9bkII0e+hw6Nv18rhbnaO1vV2aBeOxoqpdZjm43mCYisVfyfcPPRKSsoOXpbYJibvZava4ty9p\/55gusjUXa6tbtpQhRRbqmxjldvVopTSn3feegzSlVBkUirmJmYpi0b25qSB1mtqEn+iuUDuvUPG7TG8z5dErQEzyj8vSnw3JjdM6XenuxDsmkecSZWuL+fXjxqBCAugQ9rzHH8lrGBq7IUFNCg8+IufVvNCGy78WOcdoJ8NWx0OAa5HdD\/zKFK6m5MXEOAc7SiCW2LG4TKomXDBc9VIJP3jtVtC1vJLbUufG83m9t8svWDJhRh9XfP2YfC9xmA6+NQj+aqk1iaq5qU1TvBpwWrpDRvaC6ou3JQ8q8YFYnpLEt22kUpLDokWo+dURoPGjXZHq8WEifwlp8V+YTkevq4FnzAtkK"
-}
-        "#;
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/gbox/repository.json");
+        let json = std::fs::read_to_string(path).expect("Can't read file");
 
         let repo: Repository = serde_json::from_str(&json).unwrap();
 
         let keys_storage = CryptKeysStorage::default();
-        let keys = keys_storage.newest_keys();
+        let keys = keys_storage.latest_keys();
         let repo = repo.decrypt(keys).unwrap();
 
         let UItem::SelfSign(ref app) = repo.applications[0] else {

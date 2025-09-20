@@ -1,6 +1,6 @@
 use clap::{Arg, Error};
 use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::{
     fs::File,
     io::{read_to_string, stdin},
@@ -9,6 +9,7 @@ use url::Url;
 
 #[derive(Clone, Debug)]
 pub(crate) enum InputFile {
+    Stdin,
     Local(PathBuf),
     Remote(Url),
 }
@@ -27,15 +28,17 @@ impl clap::builder::TypedValueParser for InputFileParser {
     ) -> Result<Self::Value, Error> {
         match value.to_str().and_then(|value| Url::parse(value).ok()) {
             Some(url) => Ok(InputFile::Remote(url)),
+            None if value == OsStr::new("-") => Ok(InputFile::Stdin),
             None => Ok(InputFile::Local(PathBuf::from(value))),
         }
     }
 }
 
 impl InputFile {
-    pub(crate) fn read_to_string(&self) -> anyhow::Result<String> {
+    pub(crate) fn read_to_string(&self, stdin_available: bool) -> anyhow::Result<String> {
         match self {
-            Self::Local(path) if path == Path::new("-") => Ok(read_to_string(stdin())?),
+            Self::Stdin if stdin_available => Ok(read_to_string(stdin())?),
+            Self::Stdin => Ok(String::new()),
             Self::Local(path) => {
                 let file = File::open(path)?;
                 Ok(read_to_string(file)?)

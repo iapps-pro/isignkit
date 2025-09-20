@@ -3,6 +3,7 @@ use super::{
     encrypted::{self, Item as EItem},
     gbox_link::{GboxLink, OptionalGboxLink},
 };
+use crate::gbox::links_map::LinksMap;
 use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
@@ -169,6 +170,97 @@ impl Repository {
             categories: self.categories,
             applications: items,
         })
+    }
+
+    pub fn normalize_links(&mut self, map: &LinksMap) {
+        let real_link = |link: Option<&GboxLink>| {
+            link.filter(|l| GboxLink::is_digest(l))
+                .and_then(|l| map.get(l))
+                .cloned()
+        };
+
+        for item in &mut self.applications {
+            match item {
+                Item::SelfSign(item) | Item::EnterpriseSign(item) => {
+                    if let Some(link) = real_link(item.link.as_ref()) {
+                        item.link = Some(link);
+                    }
+                    if let Some(link) = real_link(item.ext_info_link.as_ref()) {
+                        item.ext_info_link = Some(link);
+                    }
+                }
+                Item::Shareing(item) => {
+                    if let Some(link) = real_link(item.ext_info_link.as_ref()) {
+                        item.ext_info_link = Some(link);
+                    }
+                }
+                Item::Link(item) => {
+                    if let Some(link) = real_link(item.link.as_ref()) {
+                        item.link = Some(link);
+                    }
+                }
+                Item::File(item) => {
+                    if let Some(link) = real_link(Some(&item.link)) {
+                        item.link = link;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn obfuscate_links(&mut self) {
+        for item in &mut self.applications {
+            match item {
+                Item::SelfSign(item) | Item::EnterpriseSign(item) if item.base.password_locked => {
+                    item.link = item.link.as_ref().map(GboxLink::to_digest);
+                    item.ext_info_link = item.ext_info_link.as_ref().map(GboxLink::to_digest);
+                }
+                Item::Shareing(item) if item.base.password_locked => {
+                    item.ext_info_link = item.ext_info_link.as_ref().map(GboxLink::to_digest);
+                }
+                Item::Link(item) if item.base.password_locked => {
+                    item.link = item.link.as_ref().map(GboxLink::to_digest);
+                }
+                Item::File(item) if item.base.password_locked => {
+                    item.link = item.link.to_digest();
+                }
+                _ => {}
+            }
+        }
+    }
+
+    #[must_use]
+    pub fn create_links_map(&self) -> LinksMap {
+        let mut map = LinksMap::new();
+
+        for item in &self.applications {
+            match item {
+                Item::SelfSign(item) | Item::EnterpriseSign(item) if item.base.password_locked => {
+                    if let Some(link) = item.link.clone() {
+                        map.insert(link);
+                    }
+                    if let Some(link) = item.ext_info_link.clone() {
+                        map.insert(link);
+                    }
+                }
+                Item::Shareing(item) if item.base.password_locked => {
+                    if let Some(link) = item.ext_info_link.clone() {
+                        map.insert(link);
+                    }
+                }
+                Item::Link(item) if item.base.password_locked => {
+                    if let Some(link) = item.link.clone() {
+                        map.insert(link);
+                    }
+                }
+                Item::File(item) if item.base.password_locked => {
+                    map.insert(item.link.clone());
+                }
+                _ => {}
+            }
+        }
+
+        map
     }
 }
 

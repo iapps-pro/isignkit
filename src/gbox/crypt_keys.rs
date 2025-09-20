@@ -7,7 +7,7 @@ use version_compare::{Cmp, compare_to};
 pub struct CryptKeys {
     pub gbox_version: String,
     pub primary: String,
-    pub kvp: String,
+    pub links_map: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -28,7 +28,7 @@ impl CryptKeysStorage {
     }
 
     #[must_use]
-    pub fn newest_keys(&self) -> &CryptKeys {
+    pub fn latest_keys(&self) -> &CryptKeys {
         #[expect(clippy::missing_panics_doc, reason = "infallible")]
         self.0
             .last()
@@ -41,7 +41,7 @@ impl Default for CryptKeysStorage {
         Self(vec![CryptKeys {
             gbox_version: "1".to_string(),
             primary: obfstr!("608ba6563a954bae2c806f98f75d6e0a").to_string(),
-            kvp: obfstr!("606ea7867a9588ae2e806f98f75d8c08").to_string(),
+            links_map: obfstr!("606ea7867a9588ae2e806f98f75d8c08").to_string(),
         }])
     }
 }
