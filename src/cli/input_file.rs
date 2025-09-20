@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use clap::{Arg, Error};
 use std::{
     ffi::OsStr,
@@ -12,6 +13,13 @@ pub(crate) enum InputFile {
     Stdin,
     Local(PathBuf),
     Remote(Url),
+}
+
+impl InputFile {
+    #[must_use]
+    pub(crate) fn is_remote(&self) -> bool {
+        matches!(self, Self::Remote(_))
+    }
 }
 
 #[derive(Clone)]
@@ -35,12 +43,14 @@ impl clap::builder::TypedValueParser for InputFileParser {
 }
 
 pub(crate) trait InputFileReader {
-    fn read_remote(&self, url: &Url) -> anyhow::Result<String>;
+    fn read_remote(&self, _url: &Url) -> anyhow::Result<String> {
+        Err(anyhow!("Remote is not supported by this reader!"))
+    }
 
     fn read_to_string(&self, file: &InputFile, stdin_available: bool) -> anyhow::Result<String> {
         match file {
             InputFile::Stdin if stdin_available => {
-                eprintln!("Waiting for stdin....");
+                log::info!("Reading from stdin....");
                 Ok(read_to_string(stdin())?)
             }
             InputFile::Stdin => Ok(String::new()),
@@ -52,3 +62,6 @@ pub(crate) trait InputFileReader {
         }
     }
 }
+
+pub(crate) struct PlainReader;
+impl InputFileReader for PlainReader {}

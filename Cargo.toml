@@ -16,7 +16,12 @@ required-features = ["cli"]
 
 [features]
 default = []
-cli = ["dep:clap", "dep:reqwest"]
+cli = [
+    "dep:clap",
+    "dep:log",
+    "dep:reqwest",
+    "dep:simple_logger"
+]
 
 [dependencies]
 anyhow = "1.0.99"
@@ -33,3 +38,5 @@ version-compare = "0.2.0"
 
 clap = { version = "4.5.45", optional = true, features = ["derive"] }
 reqwest = { version = "0.12.23", features = ["blocking"], optional = true }
+simple_logger = { version = "5.0.0", optional = true }
+log = { version = "0.4.28", optional = true }

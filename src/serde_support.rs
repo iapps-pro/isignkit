@@ -1,16 +1,26 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, de};
+pub(crate) mod chrono_string_seconds {
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize, Serializer, de};
 
-pub(crate) fn chrono_string_seconds<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    let value = <&str>::deserialize(deserializer)?;
-    let format = if value.contains('.') { "%s.%f" } else { "%s" };
+    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = <&str>::deserialize(deserializer)?;
+        let format = if value.contains('.') { "%s.%f" } else { "%s" };
 
-    DateTime::parse_from_str(value, format)
-        .map_err(de::Error::custom)
-        .map(|dt| dt.with_timezone(&Utc))
+        DateTime::parse_from_str(value, format)
+            .map_err(de::Error::custom)
+            .map(|dt| dt.with_timezone(&Utc))
+    }
+
+    pub(crate) fn serialize<S>(date_time: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let formatted = date_time.format("%s").to_string();
+        formatted.serialize(serializer)
+    }
 }
 
 #[cfg(test)]
@@ -20,7 +30,7 @@ mod tests {
 
     #[derive(Deserialize)]
     struct DateTimeStruct {
-        #[serde(deserialize_with = "super::chrono_string_seconds")]
+        #[serde(with = "super::chrono_string_seconds")]
         timestamp: DateTime<Utc>,
     }
 

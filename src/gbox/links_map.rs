@@ -3,22 +3,24 @@ use crate::serde_support::chrono_string_seconds;
 use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use chrono::{DateTime, Utc};
+use rncryptor::v3::{decrypt as rndecrypt, encrypt as rnencrypt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use url::Url;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LinksMapRequest {
     #[serde(rename = "pwd")]
     pub access_code: String,
     pub udid: String,
-    #[serde(deserialize_with = "chrono_string_seconds")]
+    #[serde(with = "chrono_string_seconds")]
     pub timestamp: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EncryptedLinksMap {
     #[serde(rename = "hash")]
-    pub source_url_hash: String,
+    pub mapping_hash: String,
 
     #[serde(rename = "kvp")]
     pub links_map: String,
@@ -50,20 +52,16 @@ impl LinksMap {
         self.0.get(digest.as_ref())
     }
 
-    pub fn encrypt(
-        &self,
-        keys: &CryptKeys,
-        source_url: impl AsRef<str>,
-    ) -> Result<EncryptedLinksMap> {
-        let payload = serde_json::to_vec(&self)?;
+    pub fn encrypt(&self, keys: &CryptKeys) -> Result<EncryptedLinksMap> {
+        let mapping = serde_json::to_vec(&self)?;
+        let mapping_hash = hex::encode(*md5::compute(&mapping));
 
-        let payload = rncryptor::v3::encrypt(&keys.links_map, &payload)
-            .map_err(|error| anyhow!("{error:?}"))?;
-        let payload = BASE64_STANDARD.encode(payload);
+        let payload = rnencrypt(&keys.links_map, &mapping).map_err(|error| anyhow!("{error:?}"))?;
+        let links_map = BASE64_STANDARD.encode(payload);
 
         Ok(EncryptedLinksMap {
-            source_url_hash: hex::encode(*md5::compute(source_url.as_ref())),
-            links_map: payload,
+            mapping_hash,
+            links_map,
         })
     }
 }
@@ -71,8 +69,7 @@ impl LinksMap {
 impl EncryptedLinksMap {
     pub fn decrypt(&self, keys: &CryptKeys) -> Result<LinksMap> {
         let payload = BASE64_STANDARD.decode(&self.links_map)?;
-        let payload = rncryptor::v3::decrypt(&keys.links_map, &payload)
-            .map_err(|error| anyhow!("{error:?}"))?;
+        let payload = rndecrypt(&keys.links_map, &payload).map_err(|error| anyhow!("{error:?}"))?;
 
         let map = serde_json::from_slice(&payload)?;
 
@@ -102,6 +99,27 @@ where
             .collect();
 
         Self(map)
+    }
+}
+
+impl LinksMapRequest {
+    pub fn encrypt(&self, repo_url: &Url) -> Result<String> {
+        let password = hex::encode(*md5::compute(repo_url.as_str()));
+
+        let request = serde_json::to_vec(&self)?;
+        let request = rnencrypt(&password, &request).map_err(|error| anyhow!("{error:?}"))?;
+
+        Ok(BASE64_STANDARD.encode(request))
+    }
+
+    pub fn decrypt(encrypted: impl AsRef<str>, repo_url: &Url) -> Result<Self> {
+        let password = hex::encode(*md5::compute(repo_url.as_str()));
+
+        let encrypted = BASE64_STANDARD.decode(encrypted.as_ref())?;
+        let decrypted = rndecrypt(&password, &encrypted).map_err(|error| anyhow!("{error:?}"))?;
+
+        let request = serde_json::from_slice(&decrypted)?;
+        Ok(request)
     }
 }
 

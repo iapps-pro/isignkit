@@ -1,8 +1,7 @@
 #![deny(clippy::pedantic)]
-#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc, clippy::doc_markdown)]
 
 mod gbox;
-mod gbox_file;
 mod input_file;
 
 use anyhow::Result;
@@ -15,6 +14,8 @@ trait CliCommand {
 #[derive(Parser)]
 #[clap(version)]
 enum Command {
+    /// GBox related utils
+    #[clap(disable_version_flag = true, subcommand)]
     Gbox(gbox::GBoxCommand),
 }
 
@@ -27,6 +28,12 @@ struct CLIOptions {
 
 fn main() -> Result<()> {
     let cli_options = CLIOptions::parse();
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .without_timestamps()
+        .env()
+        .init()?;
+
     match cli_options.command {
         Command::Gbox(command) => command.run()?,
     }
