@@ -20,10 +20,7 @@ pub(crate) struct CreateMapCommand {
 impl CreateMapCommand {
     fn read_repo(&self) -> Result<Repository> {
         let reader = RepoReader::new(self.global_options.udid.as_deref());
-        let input = reader.read_to_string(&self.repo_json, true)?;
-        let repo = serde_json::from_str(&input)?;
-
-        Ok(repo)
+        reader.read_json(&self.repo_json, true)
     }
 }
 
@@ -34,8 +31,6 @@ impl CliCommand for CreateMapCommand {
         let repo: Repository = self.read_repo()?;
         let map = repo.create_links_map();
         let map = map.encrypt(&keys)?;
-        log::info!("sourceHash is `{}`", map.mapping_hash);
-        log::info!("Please edit input file manually.");
 
         let result = serde_json::to_string_pretty(&map)?;
 

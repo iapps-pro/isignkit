@@ -26,9 +26,9 @@ pub(crate) mod chrono_string_seconds {
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, Utc};
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Serialize)]
     struct DateTimeStruct {
         #[serde(with = "super::chrono_string_seconds")]
         timestamp: DateTime<Utc>,
@@ -54,5 +54,15 @@ mod tests {
         let json = r#"{"timestamp": "timestamp"}"#;
         let result = serde_json::from_str::<DateTimeStruct>(json);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn serialize() {
+        let object = DateTimeStruct {
+            timestamp: DateTime::from_timestamp(61, 0).unwrap().to_utc(),
+        };
+        let result = serde_json::to_string(&object).unwrap();
+        let json = r#"{"timestamp":"61"}"#;
+        assert_eq!(result, json);
     }
 }

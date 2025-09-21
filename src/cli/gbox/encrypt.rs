@@ -20,10 +20,7 @@ pub(crate) struct EncryptCommand {
 impl EncryptCommand {
     fn read_repo(&self) -> Result<Repository> {
         let reader = RepoReader::new(self.global_options.udid.as_deref());
-        let input = reader.read_to_string(&self.repo_json, true)?;
-        let repo = serde_json::from_str(&input)?;
-
-        Ok(repo)
+        reader.read_json(&self.repo_json, true)
     }
 }
 

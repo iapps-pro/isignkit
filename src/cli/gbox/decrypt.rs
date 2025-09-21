@@ -2,9 +2,11 @@ use super::{GlobalOptions, gbox_file::RepoReader};
 use crate::CliCommand;
 use crate::gbox::gbox_file::LinkMapReader;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader, PlainReader};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use clap::Parser;
-use ios_signers_types::gbox::{CryptKeys, LinksMap, Repository, encrypted};
+use ios_signers_types::gbox::{
+    CryptKeys, EncryptedLinksMap, Repository, encrypted, links_map::LinkMapResponse,
+};
 use std::path::Path;
 use url::Url;
 
@@ -34,10 +36,7 @@ pub(crate) struct DecryptCommand {
 impl DecryptCommand {
     fn read_repo(&self) -> Result<encrypted::Repository> {
         let reader = RepoReader::new(self.global_options.udid.as_deref());
-        let input = reader.read_to_string(&self.repo_json, true)?;
-        let repo = serde_json::from_str(&input)?;
-
-        Ok(repo)
+        reader.read_json(&self.repo_json, true)
     }
 
     fn normalize_links(&self, repo: &mut Repository, keys: &CryptKeys) -> Result<()> {
@@ -55,12 +54,16 @@ impl DecryptCommand {
             };
 
             let reader = LinkMapReader::new(udid, code, Url::parse(url)?);
-            reader.read_to_string(links_map, false)?
+            let response: LinkMapResponse = reader.read_json(links_map, false)?;
+            match response {
+                LinkMapResponse::Success { data } => data,
+                LinkMapResponse::Error { message } => return Err(anyhow!("{message}")),
+            }
         } else {
-            PlainReader.read_to_string(links_map, false)?
+            PlainReader.read_json::<EncryptedLinksMap>(links_map, false)?
         };
 
-        let links_map = LinksMap::from_encrypted(&links_map, keys)?;
+        let links_map = links_map.decrypt(keys)?;
         repo.normalize_links(&links_map);
 
         Ok(())

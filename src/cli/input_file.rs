@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use clap::{Arg, Error};
+use serde::de::DeserializeOwned;
 use std::{
     ffi::OsStr,
     fs::File,
@@ -60,6 +61,15 @@ pub(crate) trait InputFileReader {
             }
             InputFile::Remote(url) => self.read_remote(url),
         }
+    }
+
+    fn read_json<T>(&self, file: &InputFile, stdin_available: bool) -> anyhow::Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        let json = self.read_to_string(file, stdin_available)?;
+        let result = serde_json::from_str(&json)?;
+        Ok(result)
     }
 }
 

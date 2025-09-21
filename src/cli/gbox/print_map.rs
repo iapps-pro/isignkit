@@ -3,7 +3,7 @@ use crate::CliCommand;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader, PlainReader};
 use anyhow::{Result, anyhow};
 use clap::Parser;
-use ios_signers_types::gbox::{CryptKeys, LinksMap};
+use ios_signers_types::gbox::{CryptKeys, EncryptedLinksMap, LinksMap, links_map::LinkMapResponse};
 use std::path::Path;
 use url::Url;
 
@@ -28,7 +28,7 @@ pub(crate) struct PrintMapCommand {
 
 impl PrintMapCommand {
     fn read_map(&self, keys: &CryptKeys) -> Result<LinksMap> {
-        let input = if self.links_map.is_remote() {
+        let links_map = if self.links_map.is_remote() {
             let udid = self.global_options.udid.as_ref();
             let code = self.code.as_ref();
             let url = self.repo_url.as_ref();
@@ -39,12 +39,16 @@ impl PrintMapCommand {
             };
 
             let reader = LinkMapReader::new(udid, code, Url::parse(url)?);
-            reader.read_to_string(&self.links_map, true)?
+            let response = reader.read_json(&self.links_map, true)?;
+            match response {
+                LinkMapResponse::Success { data } => data,
+                LinkMapResponse::Error { message } => return Err(anyhow!("{message}")),
+            }
         } else {
-            PlainReader.read_to_string(&self.links_map, true)?
+            PlainReader.read_json::<EncryptedLinksMap>(&self.links_map, true)?
         };
 
-        LinksMap::from_encrypted(input, keys)
+        links_map.decrypt(keys)
     }
 }
 

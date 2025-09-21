@@ -150,11 +150,6 @@ pub struct ItemFile {
     pub link: GboxLink,
 }
 
-pub struct RepoUnlockInfo {
-    pub hash: String,
-    pub url: Url,
-}
-
 impl Repository {
     pub fn encrypt(self, keys: &CryptKeys) -> Result<encrypted::Repository> {
         let items: Vec<encrypted::Item> = self.applications.into_iter().map(Into::into).collect();

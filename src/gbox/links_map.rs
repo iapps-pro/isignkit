@@ -17,6 +17,13 @@ pub struct LinksMapRequest {
     pub timestamp: DateTime<Utc>,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum LinkMapResponse {
+    Success { data: EncryptedLinksMap },
+    Error { message: String },
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EncryptedLinksMap {
     #[serde(rename = "hash")]
@@ -142,5 +149,38 @@ mod tests {
         let expected =
             "https://storage.iapps.rejail.ru/s/HfpSH3FrPajqDNE/download/HfpSH3FrPajqDNE.ipa";
         assert_eq!(link, Some(&GboxLink::new_url(expected).unwrap()));
+    }
+
+    #[test]
+    fn invalid_response() {
+        let json = r#"
+        {
+	"success": false,
+	"message": "\u041d :D"
+}
+        "#;
+
+        let response: LinkMapResponse = serde_json::from_str(json).unwrap();
+        assert!(matches!(response, LinkMapResponse::Error { .. }));
+    }
+
+    #[test]
+    fn valid_response() {
+        let json = r#"
+        {
+	"success": true,
+	"data": {
+		"hash": "328a65a13de4a99f8218ec777587296d",
+		"kvp": "really_long_kvp_contents"
+	}
+}
+        "#;
+
+        let response: LinkMapResponse = serde_json::from_str(json).unwrap();
+        let LinkMapResponse::Success { data } = response else {
+            panic!("Got invalid response {response:?}");
+        };
+        assert_eq!(data.mapping_hash, "328a65a13de4a99f8218ec777587296d");
+        assert_eq!(data.links_map, "really_long_kvp_contents");
     }
 }
