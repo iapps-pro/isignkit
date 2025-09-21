@@ -21,6 +21,14 @@ impl InputFile {
     pub(crate) fn is_remote(&self) -> bool {
         matches!(self, Self::Remote(_))
     }
+
+    pub(crate) fn as_str(&self) -> Option<&str> {
+        match self {
+            InputFile::Stdin => None,
+            InputFile::Local(path) => path.to_str(),
+            InputFile::Remote(url) => Some(url.as_str()),
+        }
+    }
 }
 
 #[derive(Clone)]

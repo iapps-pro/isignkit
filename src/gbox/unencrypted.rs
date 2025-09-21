@@ -24,6 +24,27 @@ pub struct Repository {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UnlockAction {
+    pub title: String,
+    pub open_url: Url,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AppsUnlockProcessor {
+    pub auth_url: Url,
+    pub description: String,
+    pub actions: Vec<UnlockAction>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum SourceProcessor {
+    AppsUnlock(AppsUnlockProcessor),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RepoInfo {
     #[serde(rename = "sourceName")]
     pub name: String,
@@ -42,7 +63,7 @@ pub struct RepoInfo {
     #[serde(rename = "sourceUnlockHash", skip_serializing_if = "Option::is_none")]
     pub items_unlock_hash: Option<String>,
     #[serde(rename = "sourceProcessor", skip_serializing_if = "Option::is_none")]
-    pub source_processor: Option<serde_json::Value>,
+    pub source_processor: Option<SourceProcessor>,
     #[serde(rename = "sourceExportEnable", skip_serializing_if = "Option::is_none")]
     pub export_enable: Option<bool>,
 }
@@ -320,6 +341,15 @@ impl From<encrypted::ItemFile> for ItemFile {
         Self {
             base: item.base.into(),
             link: item.link,
+        }
+    }
+}
+
+impl UnlockAction {
+    pub fn new(title: impl Into<String>, url: Url) -> Self {
+        Self {
+            title: title.into(),
+            open_url: url,
         }
     }
 }
