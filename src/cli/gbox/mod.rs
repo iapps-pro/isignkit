@@ -2,11 +2,12 @@ mod create_map;
 mod decrypt;
 mod encrypt;
 mod gbox_file;
+mod get_config;
 mod print_map;
 
 use self::{
     create_map::CreateMapCommand, decrypt::DecryptCommand, encrypt::EncryptCommand,
-    print_map::PrintMapCommand,
+    get_config::GetConfigCommand, print_map::PrintMapCommand,
 };
 use crate::CliCommand;
 use anyhow::{Context, Result};
@@ -48,6 +49,9 @@ pub(crate) enum GBoxCommand {
     /// Create new links map
     #[clap(disable_version_flag = true)]
     CreateMap(CreateMapCommand),
+    /// Fetches remote app config
+    #[clap(disable_version_flag = true)]
+    GetConfig(GetConfigCommand),
 }
 
 impl CliCommand for GBoxCommand {
@@ -57,6 +61,7 @@ impl CliCommand for GBoxCommand {
             Self::Decrypt(command) => command.run(),
             Self::PrintMap(command) => command.run(),
             Self::CreateMap(command) => command.run(),
+            Self::GetConfig(command) => command.run(),
         }
     }
 }

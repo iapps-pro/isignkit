@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[repr(transparent)]
 pub struct SchemaVersion(String);
 

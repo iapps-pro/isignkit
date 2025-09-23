@@ -7,7 +7,7 @@ use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Repository {
     #[serde(rename = "version")]
     pub schema_version: SchemaVersion,
@@ -20,7 +20,7 @@ pub struct Repository {
     pub applications: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemBase {
     #[serde(rename = "AO4")]
@@ -44,7 +44,7 @@ pub struct ItemBase {
     pub force_ppq_bypass: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(tag = "AO1", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Item {
     SelfSign(ItemApplication),
@@ -55,7 +55,7 @@ pub enum Item {
     File(ItemFile),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemApplication {
     #[serde(flatten)]
     pub base: ItemBase,
@@ -82,7 +82,7 @@ pub struct ItemApplication {
     pub ext_info_link: Option<GboxLink>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemLink {
     #[serde(flatten)]
     pub base: ItemBase,
@@ -90,7 +90,7 @@ pub struct ItemLink {
     pub link: Option<GboxLink>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemShareing {
     #[serde(flatten)]
     pub base: ItemBase,
@@ -114,7 +114,7 @@ pub struct ItemShareing {
     pub ext_info_link: Option<GboxLink>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemFile {
     #[serde(flatten)]
     pub base: ItemBase,

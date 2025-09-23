@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::Not;
 use url::Url;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Repository {
     #[serde(rename = "version")]
     pub schema_version: SchemaVersion,
@@ -23,14 +23,14 @@ pub struct Repository {
     pub applications: Vec<Item>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct UnlockAction {
     pub title: String,
     pub open_url: Url,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct AppsUnlockProcessor {
     pub auth_url: Url,
@@ -38,13 +38,13 @@ pub struct AppsUnlockProcessor {
     pub actions: Vec<UnlockAction>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum SourceProcessor {
     AppsUnlock(AppsUnlockProcessor),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RepoInfo {
     #[serde(rename = "sourceName")]
     pub name: String,
@@ -68,7 +68,7 @@ pub struct RepoInfo {
     pub export_enable: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemBase {
     #[serde(rename = "appName")]
@@ -92,7 +92,7 @@ pub struct ItemBase {
     pub force_ppq_bypass: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(tag = "appType", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Item {
     SelfSign(ItemApplication),
@@ -103,7 +103,7 @@ pub enum Item {
     File(ItemFile),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemApplication {
     #[serde(flatten)]
     pub base: ItemBase,
@@ -130,7 +130,7 @@ pub struct ItemApplication {
     pub ext_info_link: Option<GboxLink>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemLink {
     #[serde(flatten)]
     pub base: ItemBase,
@@ -138,7 +138,7 @@ pub struct ItemLink {
     pub link: Option<GboxLink>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemShareing {
     #[serde(flatten)]
     pub base: ItemBase,
@@ -162,7 +162,7 @@ pub struct ItemShareing {
     pub ext_info_link: Option<GboxLink>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemFile {
     #[serde(flatten)]
     pub base: ItemBase,

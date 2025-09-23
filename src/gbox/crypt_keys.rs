@@ -8,6 +8,7 @@ pub struct CryptKeys {
     pub gbox_version: String,
     pub primary: String,
     pub links_map: String,
+    pub config_pubkey: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -42,6 +43,7 @@ impl Default for CryptKeysStorage {
             gbox_version: "1".to_string(),
             primary: obfstr!("608ba6563a954bae2c806f98f75d6e0a").to_string(),
             links_map: obfstr!("606ea7867a9588ae2e806f98f75d8c08").to_string(),
+            config_pubkey: obfstr!("MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDkLr9Ux2QA2n6o5r2PMsxIEp4ib9Iywk56KBOeuyLLqMPXt/kb5bsi4T7IYIHYJ3OQPlc3z3YYhBPURRCroENa38LihR5qhspAJKOBRIcR4qGp6UBEu2m5NdYBmPBZ8pvUpKLJ4sZYFtEyCZQQFTLOXJXTsNQge2nxMBJ2v3IaSQIDAQAB").to_string()
         }])
     }
 }

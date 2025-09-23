@@ -4,14 +4,14 @@ use std::fmt::{Display, Formatter};
 use std::{ops::Deref, str::FromStr};
 use url::Url;
 
-#[derive(Debug, Serialize, Clone, Eq, PartialEq, Hash)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(untagged)]
 pub enum GboxLink {
     Url(Url),
     Digest(String),
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(transparent)]
 pub struct OptionalGboxLink(
     #[serde(
