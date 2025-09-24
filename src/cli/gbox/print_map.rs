@@ -8,7 +8,8 @@ use std::path::Path;
 use url::Url;
 
 #[derive(Parser)]
-#[clap(about, version)]
+#[clap(visible_alias = "pm")]
+/// Print links map contents
 pub(crate) struct PrintMapCommand {
     #[clap(flatten)]
     global_options: GlobalOptions,

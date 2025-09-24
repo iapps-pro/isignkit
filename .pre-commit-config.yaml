@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: lint
+        name: Lint sources
+        entry: cargo clippy --all-features
+        language: system
+        types_or: [ rust ]

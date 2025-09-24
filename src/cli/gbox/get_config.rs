@@ -8,7 +8,8 @@ use serde_json::{Map, Value};
 use std::path::Path;
 
 #[derive(Parser)]
-#[clap(about, version)]
+#[clap(visible_alias = "conf")]
+/// Fetches remote app config
 pub(crate) struct GetConfigCommand {
     #[clap(flatten)]
     global_options: GlobalOptions,

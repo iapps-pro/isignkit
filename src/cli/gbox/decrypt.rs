@@ -2,17 +2,18 @@ use super::{GlobalOptions, gbox_file::RepoReader};
 use crate::CliCommand;
 use crate::gbox::gbox_file::LinkMapReader;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader, PlainReader};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use ios_signers_types::gbox::{
-    CryptKeys, EncryptedLinksMap, Repository, SourceProcessor, encrypted,
+    CryptKeys, EncryptedLinksMap, GboxRepo, Repository, SourceProcessor, encrypted,
     links_map::LinkMapResponse,
 };
 use std::path::Path;
 use url::Url;
 
 #[derive(Parser)]
-#[clap(about, version)]
+#[clap(visible_alias = "d")]
+/// Perform repo decryption
 pub(crate) struct DecryptCommand {
     #[clap(flatten)]
     global_options: GlobalOptions,
@@ -37,7 +38,17 @@ pub(crate) struct DecryptCommand {
 impl DecryptCommand {
     fn read_repo(&self) -> Result<encrypted::Repository> {
         let reader = RepoReader::new(self.global_options.udid.as_deref());
-        reader.read_json(&self.repo_json, true)
+        let repo = reader
+            .read_json::<GboxRepo>(&self.repo_json, true)
+            .with_context(|| format!("Can't read: {:?}", self.repo_json.as_str()))?;
+
+        if let GboxRepo::Encrypted(repo) = repo {
+            Ok(repo)
+        } else {
+            Err(anyhow!(
+                "Your repository seems to be decrypted, expected to get encrypted"
+            ))
+        }
     }
 
     fn normalize_links(&self, repo: &mut Repository, keys: &CryptKeys) -> Result<()> {

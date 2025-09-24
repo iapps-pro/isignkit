@@ -12,15 +12,12 @@ trait CliCommand {
 }
 
 #[derive(Parser)]
-#[clap(version)]
 enum Command {
-    /// GBox related utils
-    #[clap(disable_version_flag = true, subcommand)]
+    #[clap(subcommand)]
     Gbox(gbox::GBoxCommand),
 }
 
 #[derive(Parser)]
-#[clap(about, version)]
 struct CLIOptions {
     #[command(subcommand)]
     command: Command,

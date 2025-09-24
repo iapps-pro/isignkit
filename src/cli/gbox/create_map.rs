@@ -1,13 +1,14 @@
 use super::{GlobalOptions, gbox_file::RepoReader};
 use crate::CliCommand;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader};
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use ios_signers_types::gbox::Repository;
+use ios_signers_types::gbox::{GboxRepo, Repository};
 use std::path::Path;
 
 #[derive(Parser)]
-#[clap(about, version)]
+#[clap(visible_alias = "cm")]
+/// Create new links map
 pub(crate) struct CreateMapCommand {
     #[clap(flatten)]
     global_options: GlobalOptions,
@@ -20,7 +21,17 @@ pub(crate) struct CreateMapCommand {
 impl CreateMapCommand {
     fn read_repo(&self) -> Result<Repository> {
         let reader = RepoReader::new(self.global_options.udid.as_deref());
-        reader.read_json(&self.repo_json, true)
+        let repo = reader
+            .read_json::<GboxRepo>(&self.repo_json, true)
+            .with_context(|| format!("Can't read: {:?}", self.repo_json.as_str()))?;
+
+        if let GboxRepo::Plain(repo) = repo {
+            Ok(repo)
+        } else {
+            Err(anyhow!(
+                "Your repository seems to be encrypted, expected to get decrypted"
+            ))
+        }
     }
 }
 

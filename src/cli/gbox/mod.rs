@@ -36,21 +36,13 @@ pub(crate) struct GlobalOptions {
 }
 
 #[derive(clap::Subcommand)]
+#[clap(visible_alias = "g")]
+/// GBox related utils
 pub(crate) enum GBoxCommand {
-    /// Perform repo encryption
-    #[clap(disable_version_flag = true)]
     Encrypt(EncryptCommand),
-    /// Perform repo decryption
-    #[clap(disable_version_flag = true)]
     Decrypt(DecryptCommand),
-    /// Print links map contents
-    #[clap(disable_version_flag = true)]
     PrintMap(PrintMapCommand),
-    /// Create new links map
-    #[clap(disable_version_flag = true)]
     CreateMap(CreateMapCommand),
-    /// Fetches remote app config
-    #[clap(disable_version_flag = true)]
     GetConfig(GetConfigCommand),
 }
 
