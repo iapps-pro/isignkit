@@ -1,5 +1,5 @@
 use super::{CryptKeys, GboxLink};
-use crate::serde_support::chrono_string_seconds;
+use crate::{serde_support::chrono_string_seconds, unit_false::False, unit_true::True};
 use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use chrono::{DateTime, Utc};
@@ -20,8 +20,23 @@ pub struct LinksMapRequest {
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum LinkMapResponse {
-    Success { data: EncryptedLinksMap },
-    Error { message: String },
+    Success {
+        /// A dummy field. Used only for deserialization.
+        #[allow(dead_code)]
+        success: True,
+
+        #[serde(rename = "data")]
+        map: EncryptedLinksMap,
+    },
+    Error {
+        /// A dummy field. Used only for deserialization.
+        #[allow(dead_code)]
+        success: False,
+
+        /// Error message
+        #[serde(rename = "message")]
+        error: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -177,7 +192,7 @@ mod tests {
         "#;
 
         let response: LinkMapResponse = serde_json::from_str(json).unwrap();
-        let LinkMapResponse::Success { data } = response else {
+        let LinkMapResponse::Success { map: data, .. } = response else {
             panic!("Got invalid response {response:?}");
         };
         assert_eq!(data.mapping_hash, "328a65a13de4a99f8218ec777587296d");

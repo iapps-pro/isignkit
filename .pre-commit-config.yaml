@@ -5,4 +5,5 @@ repos:
         name: Lint sources
         entry: cargo clippy --all-features
         language: system
-        types_or: [ rust ]
+        types: [ rust ]
+        pass_filenames: false

@@ -33,13 +33,20 @@ pub struct ItemBase {
     pub image: OptionalGboxLink,
     #[serde(rename = "AO3")]
     pub update_time: String,
+
+    /// Item will be locked with unlock code when flag is set
     #[serde(rename = "A11", skip_serializing_if = "std::ops::Not::not", default)]
     pub password_locked: bool,
-    #[serde(rename = "A12", skip_serializing_if = "std::ops::Not::not", default)]
-    pub hide: bool,
 
+    /// If flag is set, item will be displayed only after unlock
+    #[serde(rename = "A12", skip_serializing_if = "std::ops::Not::not", default)]
+    pub hide_until_unlocked: bool,
+
+    /// Custom `GBoxPlus` field. Shows extra line below version line if set
     #[serde(skip_serializing_if = "Option::is_none")]
     pub detailed_info: Option<String>,
+
+    /// Custom `GBoxPlus` field. Forces PPQ bypass when signing if set
     #[serde(rename = "forcePPQBypass", default)]
     pub force_ppq_bypass: bool,
 }
@@ -47,11 +54,23 @@ pub struct ItemBase {
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(tag = "AO1", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Item {
+    /// Application which mustbe signed with custom certificate
     SelfSign(ItemApplication),
+
     #[serde(rename = "ENT_SIGN")]
+    /// Application which must be signed with GBox-sourced enterprise certificate
     EnterpriseSign(ItemApplication),
+
+    /// Link type, directly open the url for advertising or promotional purposes
     Link(ItemLink),
-    Shareing(ItemShareing),
+
+    /// Application directly obtained from the App Store.
+    ///
+    /// It is encrypted and already signed with App Store certificate,
+    /// so `GBox` will install it without resigning
+    #[serde(rename = "SHAREING")]
+    AppWithoutSign(ItemApplication),
+
     File(ItemFile),
 }
 
@@ -91,30 +110,6 @@ pub struct ItemLink {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemShareing {
-    #[serde(flatten)]
-    pub base: ItemBase,
-
-    /// Link to the external application plist file containing name, version, image and file link
-    ///
-    ///
-    /// `GBox` uses it this way
-    /// ```objc
-    ///  v8 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->assets->0->url"));
-    ///  v9 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->assets->1->url"));
-    ///  v10 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->metadata->title"));
-    ///  v11 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->metadata->bundle-version"));
-    ///  v12 = -[GBApp init](objc_alloc(&OBJC_CLASS___GBApp), "init");
-    ///  -[GBApp setAppPackage:](v12, "setAppPackage:", v8);
-    ///  -[GBApp setAppName:](v12, "setAppName:", v10);
-    ///  -[GBApp setAppVersion:](v12, "setAppVersion:", v11);
-    ///  -[GBApp setAppImage:](v12, "setAppImage:", v9);
-    /// ```
-    #[serde(rename = "AO9", skip_serializing_if = "Option::is_none")]
-    pub ext_info_link: Option<GboxLink>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ItemFile {
     #[serde(flatten)]
     pub base: ItemBase,
@@ -145,7 +140,7 @@ impl From<UItem> for Item {
             UItem::SelfSign(item) => Self::SelfSign(item.into()),
             UItem::EnterpriseSign(item) => Self::EnterpriseSign(item.into()),
             UItem::Link(item) => Self::Link(item.into()),
-            UItem::Shareing(item) => Self::Shareing(item.into()),
+            UItem::AppWithoutSign(item) => Self::AppWithoutSign(item.into()),
             UItem::File(item) => Self::File(item.into()),
         }
     }
@@ -170,15 +165,6 @@ impl From<unencrypted::ItemLink> for ItemLink {
     }
 }
 
-impl From<unencrypted::ItemShareing> for ItemShareing {
-    fn from(item: unencrypted::ItemShareing) -> Self {
-        Self {
-            base: item.base.into(),
-            ext_info_link: item.ext_info_link,
-        }
-    }
-}
-
 impl From<unencrypted::ItemFile> for ItemFile {
     fn from(item: unencrypted::ItemFile) -> Self {
         Self {
@@ -197,7 +183,7 @@ impl From<unencrypted::ItemBase> for ItemBase {
             image: base.image,
             update_time: base.update_time,
             password_locked: base.password_locked,
-            hide: base.hide,
+            hide_until_unlocked: base.hide_until_unlocked,
             detailed_info: base.detailed_info,
             force_ppq_bypass: base.force_ppq_bypass,
         }

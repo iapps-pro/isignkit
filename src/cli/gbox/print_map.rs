@@ -42,8 +42,8 @@ impl PrintMapCommand {
             let reader = LinkMapReader::new(udid, code, Url::parse(url)?);
             let response = reader.read_json(&self.links_map, true)?;
             match response {
-                LinkMapResponse::Success { data } => data,
-                LinkMapResponse::Error { message } => return Err(anyhow!("{message}")),
+                LinkMapResponse::Success { map, .. } => map,
+                LinkMapResponse::Error { error, .. } => return Err(anyhow!("{error}")),
             }
         } else {
             PlainReader.read_json::<EncryptedLinksMap>(&self.links_map, true)?

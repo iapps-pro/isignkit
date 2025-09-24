@@ -2,8 +2,8 @@ use super::{
     CryptKeys, SchemaVersion,
     encrypted::{self, Item as EItem},
     gbox_link::{GboxLink, OptionalGboxLink},
+    links_map::LinksMap,
 };
-use crate::gbox::links_map::LinksMap;
 use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
@@ -81,13 +81,20 @@ pub struct ItemBase {
     pub image: OptionalGboxLink,
     #[serde(rename = "appUpdateTime")]
     pub update_time: String,
+
+    /// Item will be locked with unlock code when flag is set
     #[serde(rename = "lock", skip_serializing_if = "Not::not", default)]
     pub password_locked: bool,
-    #[serde(skip_serializing_if = "Not::not", default)]
-    pub hide: bool,
 
+    /// If flag is set, item will be displayed only after unlock
+    #[serde(rename = "hide", skip_serializing_if = "Not::not", default)]
+    pub hide_until_unlocked: bool,
+
+    /// Custom `GBoxPlus` field. Shows extra line below version line if set
     #[serde(skip_serializing_if = "Option::is_none")]
     pub detailed_info: Option<String>,
+
+    /// Custom `GBoxPlus` field. Forces PPQ bypass when signing if set
     #[serde(rename = "forcePPQBypass", skip_serializing_if = "Not::not", default)]
     pub force_ppq_bypass: bool,
 }
@@ -99,7 +106,7 @@ pub enum Item {
     #[serde(rename = "ENT_SIGN")]
     EnterpriseSign(ItemApplication),
     Link(ItemLink),
-    Shareing(ItemShareing),
+    AppWithoutSign(ItemApplication),
     File(ItemFile),
 }
 
@@ -134,32 +141,9 @@ pub struct ItemApplication {
 pub struct ItemLink {
     #[serde(flatten)]
     pub base: ItemBase,
+
     #[serde(rename = "appLink", skip_serializing_if = "Option::is_none")]
     pub link: Option<GboxLink>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemShareing {
-    #[serde(flatten)]
-    pub base: ItemBase,
-
-    /// Link to the external application plist file containing name, version, image and file link
-    ///
-    ///
-    /// `GBox` uses it this way
-    /// ```objc
-    ///  v8 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->assets->0->url"));
-    ///  v9 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->assets->1->url"));
-    ///  v10 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->metadata->title"));
-    ///  v11 = objc_msgSend(v7, "objectForKeyChain:", CFSTR("items->0->metadata->bundle-version"));
-    ///  v12 = -[GBApp init](objc_alloc(&OBJC_CLASS___GBApp), "init");
-    ///  -[GBApp setAppPackage:](v12, "setAppPackage:", v8);
-    ///  -[GBApp setAppName:](v12, "setAppName:", v10);
-    ///  -[GBApp setAppVersion:](v12, "setAppVersion:", v11);
-    ///  -[GBApp setAppImage:](v12, "setAppImage:", v9);
-    /// ```
-    #[serde(rename = "appPlist", skip_serializing_if = "Option::is_none")]
-    pub ext_info_link: Option<GboxLink>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
@@ -205,7 +189,7 @@ impl Repository {
                         item.ext_info_link = Some(link);
                     }
                 }
-                Item::Shareing(item) => {
+                Item::AppWithoutSign(item) => {
                     if let Some(link) = real_link(item.ext_info_link.as_ref()) {
                         item.ext_info_link = Some(link);
                     }
@@ -231,7 +215,7 @@ impl Repository {
                     item.link = item.link.as_ref().map(GboxLink::to_digest);
                     item.ext_info_link = item.ext_info_link.as_ref().map(GboxLink::to_digest);
                 }
-                Item::Shareing(item) if item.base.password_locked => {
+                Item::AppWithoutSign(item) if item.base.password_locked => {
                     item.ext_info_link = item.ext_info_link.as_ref().map(GboxLink::to_digest);
                 }
                 Item::Link(item) if item.base.password_locked => {
@@ -259,7 +243,7 @@ impl Repository {
                         map.insert(link);
                     }
                 }
-                Item::Shareing(item) if item.base.password_locked => {
+                Item::AppWithoutSign(item) if item.base.password_locked => {
                     if let Some(link) = item.ext_info_link.clone() {
                         map.insert(link);
                     }
@@ -286,7 +270,7 @@ impl From<EItem> for Item {
             EItem::SelfSign(item) => Self::SelfSign(item.into()),
             EItem::EnterpriseSign(item) => Self::EnterpriseSign(item.into()),
             EItem::Link(item) => Self::Link(item.into()),
-            EItem::Shareing(item) => Self::Shareing(item.into()),
+            EItem::AppWithoutSign(item) => Self::AppWithoutSign(item.into()),
             EItem::File(item) => Self::File(item.into()),
         }
     }
@@ -301,7 +285,7 @@ impl From<encrypted::ItemBase> for ItemBase {
             image: item.image,
             update_time: item.update_time,
             password_locked: item.password_locked,
-            hide: item.hide,
+            hide_until_unlocked: item.hide_until_unlocked,
             detailed_info: item.detailed_info,
             force_ppq_bypass: item.force_ppq_bypass,
         }
@@ -323,15 +307,6 @@ impl From<encrypted::ItemLink> for ItemLink {
         Self {
             base: item.base.into(),
             link: item.link,
-        }
-    }
-}
-
-impl From<encrypted::ItemShareing> for ItemShareing {
-    fn from(item: encrypted::ItemShareing) -> Self {
-        Self {
-            base: item.base.into(),
-            ext_info_link: item.ext_info_link,
         }
     }
 }
@@ -381,7 +356,7 @@ mod tests {
 
         assert_eq!(app.base.name, "Taurine");
         assert_eq!(app.base.version.as_deref(), Some("1.0.4"));
-        assert!(app.base.hide);
+        assert!(app.base.hide_until_unlocked);
         assert_eq!(
             app.ext_info_link.as_deref(),
             Some("https://gbox.lanzouw.com/iBBjto6ugyf")

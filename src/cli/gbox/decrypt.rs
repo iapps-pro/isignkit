@@ -88,8 +88,8 @@ impl DecryptCommand {
             let reader = LinkMapReader::new(udid, code, Url::parse(url)?);
             let response: LinkMapResponse = reader.read_json(&links_map, false)?;
             match response {
-                LinkMapResponse::Success { data } => data,
-                LinkMapResponse::Error { message } => return Err(anyhow!("{message}")),
+                LinkMapResponse::Success { map, .. } => map,
+                LinkMapResponse::Error { error, .. } => return Err(anyhow!("{error}")),
             }
         } else {
             PlainReader.read_json::<EncryptedLinksMap>(&links_map, false)?
