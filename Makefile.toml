@@ -1,0 +1,87 @@
+[config]
+skip_core_tasks = true
+
+[env]
+CARGO_BUILD_RELEASE_ARG = { value = "--release", condition = { profiles = ["release"] } }
+PROJECT_FAT_BINARY = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/sign-util"
+OPENSSL_NO_PKG_CONFIG = "1"
+AARCH64_APPLE_DARWIN_OPENSSL_LIB_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/ssl/darwin64-arm64/lib"
+AARCH64_APPLE_DARWIN_OPENSSL_INCLUDE_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/ssl/darwin64-arm64/include"
+X86_64_APPLE_DARWIN_OPENSSL_LIB_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/ssl/darwin64-x86_64/lib"
+X86_64_APPLE_DARWIN_OPENSSL_INCLUDE_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/ssl/darwin64-x86_64/include"
+
+[tasks.test]
+category = "Test"
+description = "Runs cargo test"
+command = "cargo"
+args = ["test", "--all-features"]
+
+[tasks.build-macos-aarch64]
+category = "Build"
+description = "Build CLI for arm-based macOS only"
+command = "cargo"
+toolchain = "${CARGO_MAKE_RUST_DEFAULT_TOOLCHAIN}"
+args = [
+    "build", "@@remove-empty(CARGO_BUILD_RELEASE_ARG)",
+    "--target", "aarch64-apple-darwin",
+    "--features", "cli,openssl"
+]
+
+[tasks.build-macos-x86]
+category = "Build"
+description = "Build CLI for x86 macOS only"
+command = "cargo"
+toolchain = "${CARGO_MAKE_RUST_DEFAULT_TOOLCHAIN}"
+args = [
+    "build", "@@remove-empty(CARGO_BUILD_RELEASE_ARG)",
+    "--target", "x86_64-apple-darwin",
+    "--features", "cli,openssl"
+]
+
+[tasks.build-macos]
+category = "Build"
+description = "Build CLI for both x86 and arm-based macOS"
+condition = { platforms = ["mac"] }
+dependencies = ["build-openssl", "build-macos-aarch64", "build-macos-x86"]
+command = "lipo"
+args = [
+    "-create",
+    "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/x86_64-apple-darwin/${CARGO_MAKE_CARGO_PROFILE}/sign-util",
+    "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/aarch64-apple-darwin/${CARGO_MAKE_CARGO_PROFILE}/sign-util",
+    "-o",
+    "${PROJECT_FAT_BINARY}",
+]
+
+[tasks.build-openssl]
+private = true
+script_runner = "bash"
+script = """
+set -e
+OPENSSL_BUILD_DIR="${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/openssl"
+OPENSSL_INSTALL_DIR="${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/ssl"
+git clone https://github.com/openssl/openssl "${OPENSSL_BUILD_DIR}" -b openssl-3.5.3 --depth 1 || true
+cd "${OPENSSL_BUILD_DIR}"
+
+for ssl_target in darwin64-arm64 darwin64-x86_64; do
+    ./Configure \
+        --prefix=${OPENSSL_INSTALL_DIR}/${ssl_target} \
+        --openssldir=${OPENSSL_INSTALL_DIR}/${ssl_target} \
+        --release \
+        no-asm no-deprecated no-ec no-ecdsa no-ecdh no-dsa no-dh no-mdc2 \
+        no-whirlpool no-camellia no-cast no-idea no-seed no-sm2 no-sm3 \
+        no-sm4 no-chacha no-poly1305 no-rc2 no-rc4 no-rc5 no-des no-cms \
+        no-gost no-srp no-ssl3 no-tls no-dtls no-ssl no-ocb no-rmd160 \
+        no-comp no-zlib no-engine no-threads no-shared no-tests  no-bulk \
+        no-quic no-http no-apps no-autoload-config no-capieng no-cmp \
+        no-ct no-dgram no-docs no-dso no-legacy no-ml-dsa no-module \
+        no-multiblock no-nextprotoneg no-ocsp no-padlockeng no-psk no-sock \
+        no-ts no-uplink no-aria no-bf no-blake2 no-cmac no-md4 no-ml-kem \
+        no-scrypt no-siphash no-siv no-afalgeng no-async \
+        -DOPENSSL_SMALL_FOOTPRINT -Os ${ssl_target}
+
+    make clean
+    make -j $(nproc)
+    make install_sw
+done
+
+"""
