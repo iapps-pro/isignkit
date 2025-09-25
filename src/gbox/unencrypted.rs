@@ -1,23 +1,29 @@
+#[cfg(feature = "schema")]
+use super::validation::{schema_datetime_format, validate_object};
 use super::{
     CryptKeys, SchemaVersion,
     encrypted::{self, Item as EItem},
     gbox_link::{GboxLink, OptionalGboxLink},
     links_map::LinksMap,
 };
+use crate::unit_number::UnsignedNumber;
 use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::BASE64_STANDARD};
+#[cfg(feature = "schema")]
+use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use std::ops::Not;
 use url::Url;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub struct Repository {
     #[serde(rename = "version")]
     pub schema_version: SchemaVersion,
 
     #[serde(flatten)]
     pub info: RepoInfo,
-    #[serde(rename = "appCategories")]
+    #[serde(rename = "appCategories", default)]
     pub categories: Vec<String>,
     #[serde(rename = "appRepositories")]
     pub applications: Vec<Item>,
@@ -25,14 +31,18 @@ pub struct Repository {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub struct UnlockAction {
     pub title: String,
+    #[cfg_attr(feature = "schema", schemars(url))]
     pub open_url: Url,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub struct AppsUnlockProcessor {
+    #[cfg_attr(feature = "schema", schemars(url))]
     pub auth_url: Url,
     pub description: String,
     pub actions: Vec<UnlockAction>,
@@ -40,11 +50,13 @@ pub struct AppsUnlockProcessor {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub enum SourceProcessor {
     AppsUnlock(AppsUnlockProcessor),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub struct RepoInfo {
     #[serde(rename = "sourceName")]
     pub name: String,
@@ -57,8 +69,10 @@ pub struct RepoInfo {
     #[serde(rename = "sourceLinkTitle")]
     pub link_title: String,
     #[serde(rename = "sourceLinkUrl")]
+    #[cfg_attr(feature = "schema", schemars(url))]
     pub link_url: Url,
     #[serde(rename = "sourceUpdateTime")]
+    #[cfg_attr(feature = "schema", schemars(transform = schema_datetime_format))]
     pub update_time: String,
     #[serde(rename = "sourceUnlockHash", skip_serializing_if = "Option::is_none")]
     pub items_unlock_hash: Option<String>,
@@ -68,53 +82,66 @@ pub struct RepoInfo {
     pub export_enable: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-#[serde(rename_all = "camelCase")]
-pub struct ItemBase {
-    #[serde(rename = "appName")]
-    pub name: String,
-    #[serde(rename = "appDescription")]
-    pub description: String,
-    #[serde(rename = "appVersion", skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-    #[serde(rename = "appImage")]
-    pub image: OptionalGboxLink,
-    #[serde(rename = "appUpdateTime")]
-    pub update_time: String,
+macro_rules! with_item_base {
+    ($name:ident, { $($field:tt)* }) => {
+        #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
+        #[serde(rename_all = "camelCase")]
+        #[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
+        pub struct $name {
+            #[serde(rename = "appName")]
+            pub name: String,
 
-    /// Item will be locked with unlock code when flag is set
-    #[serde(rename = "lock", skip_serializing_if = "Not::not", default)]
-    pub password_locked: bool,
+            #[serde(rename = "appDescription")]
+            pub description: String,
 
-    /// If flag is set, item will be displayed only after unlock
-    #[serde(rename = "hide", skip_serializing_if = "Not::not", default)]
-    pub hide_until_unlocked: bool,
+            #[serde(rename = "appVersion", skip_serializing_if = "Option::is_none")]
+            pub version: Option<String>,
 
-    /// Custom `GBoxPlus` field. Shows extra line below version line if set
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub detailed_info: Option<String>,
+            #[serde(rename = "appImage")]
+            pub image: OptionalGboxLink,
 
-    /// Custom `GBoxPlus` field. Forces PPQ bypass when signing if set
-    #[serde(rename = "forcePPQBypass", skip_serializing_if = "Not::not", default)]
-    pub force_ppq_bypass: bool,
+            #[serde(rename = "appUpdateTime")]
+            #[cfg_attr(feature = "schema", schemars(transform = schema_datetime_format))]
+            pub update_time: String,
+
+            /// Item will be locked with unlock code when flag is set
+            #[serde(rename = "lock", skip_serializing_if = "Not::not", default)]
+            pub password_locked: bool,
+
+            /// If flag is set, item will be displayed only after unlock
+            #[serde(rename = "hide", skip_serializing_if = "Not::not", default)]
+            pub hide_until_unlocked: bool,
+
+            /// Custom `GBoxPlus` field. Shows extra line below version line if set
+            #[serde(skip_serializing_if = "Option::is_none")]
+            pub detailed_info: Option<String>,
+
+            /// Custom `GBoxPlus` field. Forces PPQ bypass when signing if set
+            #[serde(rename = "forcePPQBypass", skip_serializing_if = "Not::not", default)]
+            pub force_ppq_bypass: bool,
+
+            #[serde(rename = "appCateIndex")]
+            pub category_index: Option<UnsignedNumber>,
+
+            $($field)*
+        }
+    };
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(tag = "appType", rename_all = "SCREAMING_SNAKE_CASE")]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub enum Item {
     SelfSign(ItemApplication),
     #[serde(rename = "ENT_SIGN")]
     EnterpriseSign(ItemApplication),
     Link(ItemLink),
+    #[serde(rename = "SHAREING")]
     AppWithoutSign(ItemApplication),
     File(ItemFile),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemApplication {
-    #[serde(flatten)]
-    pub base: ItemBase,
-
+with_item_base!(ItemApplication, {
     #[serde(rename = "appPackage", skip_serializing_if = "Option::is_none")]
     pub link: Option<GboxLink>,
 
@@ -135,25 +162,17 @@ pub struct ItemApplication {
     /// ```
     #[serde(rename = "appPlist", skip_serializing_if = "Option::is_none")]
     pub ext_info_link: Option<GboxLink>,
-}
+});
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemLink {
-    #[serde(flatten)]
-    pub base: ItemBase,
-
+with_item_base!(ItemLink, {
     #[serde(rename = "appLink", skip_serializing_if = "Option::is_none")]
     pub link: Option<GboxLink>,
-}
+});
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemFile {
-    #[serde(flatten)]
-    pub base: ItemBase,
-
+with_item_base!(ItemFile, {
     #[serde(rename = "appPackage")]
     pub link: GboxLink,
-}
+});
 
 impl Repository {
     pub fn encrypt(self, keys: &CryptKeys) -> Result<encrypted::Repository> {
@@ -211,17 +230,17 @@ impl Repository {
     pub fn obfuscate_links(&mut self) {
         for item in &mut self.applications {
             match item {
-                Item::SelfSign(item) | Item::EnterpriseSign(item) if item.base.password_locked => {
+                Item::SelfSign(item) | Item::EnterpriseSign(item) if item.password_locked => {
                     item.link = item.link.as_ref().map(GboxLink::to_digest);
                     item.ext_info_link = item.ext_info_link.as_ref().map(GboxLink::to_digest);
                 }
-                Item::AppWithoutSign(item) if item.base.password_locked => {
+                Item::AppWithoutSign(item) if item.password_locked => {
                     item.ext_info_link = item.ext_info_link.as_ref().map(GboxLink::to_digest);
                 }
-                Item::Link(item) if item.base.password_locked => {
+                Item::Link(item) if item.password_locked => {
                     item.link = item.link.as_ref().map(GboxLink::to_digest);
                 }
-                Item::File(item) if item.base.password_locked => {
+                Item::File(item) if item.password_locked => {
                     item.link = item.link.to_digest();
                 }
                 _ => {}
@@ -235,7 +254,7 @@ impl Repository {
 
         for item in &self.applications {
             match item {
-                Item::SelfSign(item) | Item::EnterpriseSign(item) if item.base.password_locked => {
+                Item::SelfSign(item) | Item::EnterpriseSign(item) if item.password_locked => {
                     if let Some(link) = item.link.clone() {
                         map.insert(link);
                     }
@@ -243,17 +262,17 @@ impl Repository {
                         map.insert(link);
                     }
                 }
-                Item::AppWithoutSign(item) if item.base.password_locked => {
+                Item::AppWithoutSign(item) if item.password_locked => {
                     if let Some(link) = item.ext_info_link.clone() {
                         map.insert(link);
                     }
                 }
-                Item::Link(item) if item.base.password_locked => {
+                Item::Link(item) if item.password_locked => {
                     if let Some(link) = item.link.clone() {
                         map.insert(link);
                     }
                 }
-                Item::File(item) if item.base.password_locked => {
+                Item::File(item) if item.password_locked => {
                     map.insert(item.link.clone());
                 }
                 _ => {}
@@ -276,8 +295,8 @@ impl From<EItem> for Item {
     }
 }
 
-impl From<encrypted::ItemBase> for ItemBase {
-    fn from(item: encrypted::ItemBase) -> Self {
+impl From<encrypted::ItemApplication> for ItemApplication {
+    fn from(item: encrypted::ItemApplication) -> Self {
         Self {
             name: item.name,
             description: item.description,
@@ -288,14 +307,7 @@ impl From<encrypted::ItemBase> for ItemBase {
             hide_until_unlocked: item.hide_until_unlocked,
             detailed_info: item.detailed_info,
             force_ppq_bypass: item.force_ppq_bypass,
-        }
-    }
-}
-
-impl From<encrypted::ItemApplication> for ItemApplication {
-    fn from(item: encrypted::ItemApplication) -> Self {
-        Self {
-            base: item.base.into(),
+            category_index: item.category_index,
             link: item.link,
             ext_info_link: item.ext_info_link,
         }
@@ -305,7 +317,16 @@ impl From<encrypted::ItemApplication> for ItemApplication {
 impl From<encrypted::ItemLink> for ItemLink {
     fn from(item: encrypted::ItemLink) -> Self {
         Self {
-            base: item.base.into(),
+            name: item.name,
+            description: item.description,
+            version: item.version,
+            image: item.image,
+            update_time: item.update_time,
+            password_locked: item.password_locked,
+            hide_until_unlocked: item.hide_until_unlocked,
+            detailed_info: item.detailed_info,
+            force_ppq_bypass: item.force_ppq_bypass,
+            category_index: item.category_index,
             link: item.link,
         }
     }
@@ -314,7 +335,16 @@ impl From<encrypted::ItemLink> for ItemLink {
 impl From<encrypted::ItemFile> for ItemFile {
     fn from(item: encrypted::ItemFile) -> Self {
         Self {
-            base: item.base.into(),
+            name: item.name,
+            description: item.description,
+            version: item.version,
+            image: item.image,
+            update_time: item.update_time,
+            password_locked: item.password_locked,
+            hide_until_unlocked: item.hide_until_unlocked,
+            detailed_info: item.detailed_info,
+            force_ppq_bypass: item.force_ppq_bypass,
+            category_index: item.category_index,
             link: item.link,
         }
     }
@@ -326,6 +356,23 @@ impl UnlockAction {
             title: title.into(),
             open_url: url,
         }
+    }
+}
+
+#[cfg(feature = "schema")]
+impl Repository {
+    #[must_use]
+    pub fn schema() -> impl Serialize {
+        schema_for!(Self)
+    }
+
+    pub fn validate_and_parse(object: impl AsRef<str>) -> Result<Self> {
+        let schema = serde_json::to_value(Self::schema())?;
+        let object = serde_json::from_str::<serde_json::Value>(object.as_ref())?;
+        validate_object(&object, schema)?;
+
+        let repo = serde_json::from_value(object)?;
+        Ok(repo)
     }
 }
 
@@ -354,9 +401,9 @@ mod tests {
             panic!("Not an application");
         };
 
-        assert_eq!(app.base.name, "Taurine");
-        assert_eq!(app.base.version.as_deref(), Some("1.0.4"));
-        assert!(app.base.hide_until_unlocked);
+        assert_eq!(app.name, "Taurine");
+        assert_eq!(app.version.as_deref(), Some("1.0.4"));
+        assert!(app.hide_until_unlocked);
         assert_eq!(
             app.ext_info_link.as_deref(),
             Some("https://gbox.lanzouw.com/iBBjto6ugyf")
@@ -384,7 +431,7 @@ mod tests {
             panic!("Not a shareing");
         };
 
-        assert_eq!(file.base.version.as_deref(), Some("4.0"));
+        assert_eq!(file.version.as_deref(), Some("4.0"));
         assert_eq!(&*file.link, "https://gbox.pub/Public/ios/AlertTest.dylib");
     }
 

@@ -4,10 +4,13 @@ mod encrypt;
 mod gbox_file;
 mod get_config;
 mod print_map;
+mod schema;
+mod validate;
 
 use self::{
     create_map::CreateMapCommand, decrypt::DecryptCommand, encrypt::EncryptCommand,
-    get_config::GetConfigCommand, print_map::PrintMapCommand,
+    get_config::GetConfigCommand, print_map::PrintMapCommand, schema::SchemaCommand,
+    validate::ValidateCommand,
 };
 use crate::CliCommand;
 use anyhow::{Context, Result};
@@ -44,6 +47,8 @@ pub(crate) enum GBoxCommand {
     PrintMap(PrintMapCommand),
     CreateMap(CreateMapCommand),
     GetConfig(GetConfigCommand),
+    Validate(ValidateCommand),
+    Schema(SchemaCommand),
 }
 
 impl CliCommand for GBoxCommand {
@@ -54,6 +59,8 @@ impl CliCommand for GBoxCommand {
             Self::PrintMap(command) => command.run(),
             Self::CreateMap(command) => command.run(),
             Self::GetConfig(command) => command.run(),
+            Self::Validate(command) => command.run(),
+            Self::Schema(command) => command.run(),
         }
     }
 }

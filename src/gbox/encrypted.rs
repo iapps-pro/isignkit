@@ -1,58 +1,80 @@
+#[cfg(feature = "schema")]
+use super::validation::{schema_datetime_format, validate_object};
 use super::{
     CryptKeys, SchemaVersion,
     gbox_link::{GboxLink, OptionalGboxLink},
     unencrypted::{self, Item as UItem, RepoInfo},
 };
+use crate::unit_number::UnsignedNumber;
 use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::BASE64_STANDARD};
+#[cfg(feature = "schema")]
+use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub struct Repository {
     #[serde(rename = "version")]
     pub schema_version: SchemaVersion,
 
     #[serde(flatten)]
     pub info: RepoInfo,
-    #[serde(rename = "appCategories")]
+    #[serde(rename = "appCategories", default)]
     pub categories: Vec<String>,
     #[serde(rename = "appRepositories")]
     pub applications: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-#[serde(rename_all = "camelCase")]
-pub struct ItemBase {
-    #[serde(rename = "AO4")]
-    pub name: String,
-    #[serde(rename = "AO8")]
-    pub description: String,
-    #[serde(rename = "AO5", skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-    #[serde(rename = "AO6")]
-    pub image: OptionalGboxLink,
-    #[serde(rename = "AO3")]
-    pub update_time: String,
+macro_rules! with_item_base {
+    ($name:ident, { $($field:tt)* }) => {
+        #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
+        #[serde(rename_all = "camelCase")]
+        #[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
+        pub struct $name {
+            #[serde(rename = "AO4")]
+            pub name: String,
 
-    /// Item will be locked with unlock code when flag is set
-    #[serde(rename = "A11", skip_serializing_if = "std::ops::Not::not", default)]
-    pub password_locked: bool,
+            #[serde(rename = "AO8")]
+            pub description: String,
 
-    /// If flag is set, item will be displayed only after unlock
-    #[serde(rename = "A12", skip_serializing_if = "std::ops::Not::not", default)]
-    pub hide_until_unlocked: bool,
+            #[serde(rename = "AO5", skip_serializing_if = "Option::is_none")]
+            pub version: Option<String>,
 
-    /// Custom `GBoxPlus` field. Shows extra line below version line if set
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub detailed_info: Option<String>,
+            #[serde(rename = "AO6")]
+            pub image: OptionalGboxLink,
 
-    /// Custom `GBoxPlus` field. Forces PPQ bypass when signing if set
-    #[serde(rename = "forcePPQBypass", default)]
-    pub force_ppq_bypass: bool,
+            #[serde(rename = "AO3")]
+            #[cfg_attr(feature = "schema", schemars(transform = schema_datetime_format))]
+            pub update_time: String,
+
+            /// Item will be locked with unlock code when flag is set
+            #[serde(rename = "A11", skip_serializing_if = "std::ops::Not::not", default)]
+            pub password_locked: bool,
+
+            /// If flag is set, item will be displayed only after unlock
+            #[serde(rename = "A12", skip_serializing_if = "std::ops::Not::not", default)]
+            pub hide_until_unlocked: bool,
+
+            /// Custom `GBoxPlus` field. Shows extra line below version line if set
+            #[serde(skip_serializing_if = "Option::is_none")]
+            pub detailed_info: Option<String>,
+
+            /// Custom `GBoxPlus` field. Forces PPQ bypass when signing if set
+            #[serde(rename = "forcePPQBypass", default)]
+            pub force_ppq_bypass: bool,
+
+            #[serde(rename = "AO2")]
+            pub category_index: Option<UnsignedNumber>,
+
+            $($field)*
+        }
+    };
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(tag = "AO1", rename_all = "SCREAMING_SNAKE_CASE")]
+#[cfg_attr(feature = "schema", derive(JsonSchema), schemars(deny_unknown_fields))]
 pub enum Item {
     /// Application which mustbe signed with custom certificate
     SelfSign(ItemApplication),
@@ -74,11 +96,7 @@ pub enum Item {
     File(ItemFile),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemApplication {
-    #[serde(flatten)]
-    pub base: ItemBase,
-
+with_item_base!(ItemApplication, {
     #[serde(rename = "AO7")]
     pub link: Option<GboxLink>,
 
@@ -99,30 +117,21 @@ pub struct ItemApplication {
     /// ```
     #[serde(rename = "AO9", skip_serializing_if = "Option::is_none")]
     pub ext_info_link: Option<GboxLink>,
-}
+});
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemLink {
-    #[serde(flatten)]
-    pub base: ItemBase,
+with_item_base!(ItemLink, {
     #[serde(rename = "A10", skip_serializing_if = "Option::is_none")]
     pub link: Option<GboxLink>,
-}
+});
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemFile {
-    #[serde(flatten)]
-    pub base: ItemBase,
+with_item_base!(ItemFile, {
     #[serde(rename = "AO7")]
     pub link: GboxLink,
-}
+});
 
 impl Repository {
     pub fn decrypt(self, keys: &CryptKeys) -> Result<unencrypted::Repository> {
-        let items = BASE64_STANDARD.decode(self.applications.as_bytes())?;
-        let items =
-            rncryptor::v3::decrypt(&keys.primary, &items).map_err(|error| anyhow!("{error:?}"))?;
-        let items: Vec<Item> = serde_json::from_slice(items.as_slice())?;
+        let items: Vec<Item> = serde_json::from_value(self.decrypt_payload(keys)?)?;
         let items = items.into_iter().map(Into::into).collect();
 
         Ok(unencrypted::Repository {
@@ -131,6 +140,26 @@ impl Repository {
             categories: self.categories,
             applications: items,
         })
+    }
+
+    #[cfg(feature = "schema")]
+    pub fn validate_items(&self, keys: &CryptKeys) -> Result<()> {
+        let items = self.decrypt_payload(keys)?;
+        let schema = serde_json::to_value(schema_for!(Vec<Item>))?;
+        validate_object(&items, schema)?;
+
+        Ok(())
+    }
+
+    pub fn decrypt_payload(&self, keys: &CryptKeys) -> Result<serde_json::Value> {
+        let items = BASE64_STANDARD.decode(self.applications.as_bytes())?;
+
+        let items = rncryptor::v3::decrypt(&keys.primary, &items)
+            .map_err(|error| anyhow!("Decryption failed: {error:?}"))?;
+
+        let items = serde_json::from_slice(items.as_slice())?;
+
+        Ok(items)
     }
 }
 
@@ -147,20 +176,38 @@ impl From<UItem> for Item {
 }
 
 impl From<unencrypted::ItemApplication> for ItemApplication {
-    fn from(app: unencrypted::ItemApplication) -> Self {
+    fn from(item: unencrypted::ItemApplication) -> Self {
         Self {
-            base: app.base.into(),
-            link: app.link,
-            ext_info_link: app.ext_info_link,
+            name: item.name,
+            description: item.description,
+            version: item.version,
+            image: item.image,
+            update_time: item.update_time,
+            password_locked: item.password_locked,
+            hide_until_unlocked: item.hide_until_unlocked,
+            detailed_info: item.detailed_info,
+            force_ppq_bypass: item.force_ppq_bypass,
+            category_index: item.category_index,
+            link: item.link,
+            ext_info_link: item.ext_info_link,
         }
     }
 }
 
 impl From<unencrypted::ItemLink> for ItemLink {
-    fn from(link: unencrypted::ItemLink) -> Self {
+    fn from(item: unencrypted::ItemLink) -> Self {
         Self {
-            base: link.base.into(),
-            link: link.link,
+            name: item.name,
+            description: item.description,
+            version: item.version,
+            image: item.image,
+            update_time: item.update_time,
+            password_locked: item.password_locked,
+            hide_until_unlocked: item.hide_until_unlocked,
+            detailed_info: item.detailed_info,
+            force_ppq_bypass: item.force_ppq_bypass,
+            category_index: item.category_index,
+            link: item.link,
         }
     }
 }
@@ -168,24 +215,17 @@ impl From<unencrypted::ItemLink> for ItemLink {
 impl From<unencrypted::ItemFile> for ItemFile {
     fn from(item: unencrypted::ItemFile) -> Self {
         Self {
-            base: item.base.into(),
+            name: item.name,
+            description: item.description,
+            version: item.version,
+            image: item.image,
+            update_time: item.update_time,
+            password_locked: item.password_locked,
+            hide_until_unlocked: item.hide_until_unlocked,
+            detailed_info: item.detailed_info,
+            force_ppq_bypass: item.force_ppq_bypass,
+            category_index: item.category_index,
             link: item.link,
-        }
-    }
-}
-
-impl From<unencrypted::ItemBase> for ItemBase {
-    fn from(base: unencrypted::ItemBase) -> Self {
-        Self {
-            name: base.name,
-            description: base.description,
-            version: base.version,
-            image: base.image,
-            update_time: base.update_time,
-            password_locked: base.password_locked,
-            hide_until_unlocked: base.hide_until_unlocked,
-            detailed_info: base.detailed_info,
-            force_ppq_bypass: base.force_ppq_bypass,
         }
     }
 }

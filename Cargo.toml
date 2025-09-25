@@ -19,12 +19,17 @@ default = []
 openssl = [
     "dep:openssl"
 ]
+schema = [
+    "dep:schemars",
+    "dep:boon",
+]
 cli = [
     "dep:clap",
     "dep:log",
     "dep:reqwest",
     "dep:simple_logger",
     "openssl",
+    "schema",
 ]
 
 [dependencies]
@@ -40,8 +45,10 @@ serde_json = "1.0.145"
 url = { version = "2.5.7", features = ["serde"] }
 version-compare = "0.2.0"
 
+boon = { version = "0.6.1", optional = true }
 clap = { version = "4.5.45", optional = true, features = ["derive"] }
 log = { version = "0.4.28", optional = true }
 openssl = { version = "0.10.73", optional = true }
 reqwest = { version = "0.12.23", features = ["blocking", "json"], optional = true }
+schemars = { version = "1.0.4", features = ["url2"], optional = true }
 simple_logger = { version = "5.0.0", optional = true }

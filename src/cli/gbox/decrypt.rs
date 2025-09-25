@@ -30,6 +30,10 @@ pub(crate) struct DecryptCommand {
     #[arg(long, short)]
     repo_url: Option<String>,
 
+    /// Print raw contents of encrypted payload
+    #[arg(long = "raw", default_value_t = false)]
+    print_raw: bool,
+
     /// Local input file, stdin (-) or remote URL
     #[arg(value_parser = InputFileParser)]
     repo_json: InputFile,
@@ -113,10 +117,14 @@ impl CliCommand for DecryptCommand {
         let keys = self.global_options.suitable_keys()?;
 
         let repo = self.read_repo()?;
-        let mut repo = repo.decrypt(&keys)?;
-        self.normalize_links(&mut repo, &keys)?;
+        let result = if self.print_raw {
+            serde_json::to_string_pretty(&repo.decrypt_payload(&keys)?)?
+        } else {
+            let mut repo = repo.decrypt(&keys)?;
+            self.normalize_links(&mut repo, &keys)?;
 
-        let result = serde_json::to_string_pretty(&repo)?;
+            serde_json::to_string_pretty(&repo)?
+        };
 
         let output = &self.global_options.output;
         if output == Path::new("-") {

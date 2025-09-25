@@ -1,7 +1,10 @@
+#[cfg(feature = "schema")]
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::ops::Deref;
+use std::{fmt::Display, ops::Deref};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[repr(transparent)]
 pub struct SchemaVersion(String);
 
@@ -31,5 +34,11 @@ impl Deref for SchemaVersion {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Display for SchemaVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

@@ -1,17 +1,21 @@
 use anyhow::Result;
+#[cfg(feature = "schema")]
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, de::Error};
 use std::fmt::{Display, Formatter};
 use std::{ops::Deref, str::FromStr};
 use url::Url;
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum GboxLink {
-    Url(Url),
-    Digest(String),
+    Url(#[cfg_attr(feature = "schema", schemars(url))] Url),
+    Digest(#[cfg_attr(feature = "schema", schemars(length(equal = 16)))] String),
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(transparent)]
 pub struct OptionalGboxLink(
     #[serde(
@@ -131,6 +135,7 @@ impl<'de> Deserialize<'de> for GboxLink {
         }
     }
 }
+
 impl AsRef<Option<GboxLink>> for OptionalGboxLink {
     fn as_ref(&self) -> &Option<GboxLink> {
         &self.0
