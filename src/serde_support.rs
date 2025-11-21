@@ -23,6 +23,41 @@ pub(crate) mod chrono_string_seconds {
     }
 }
 
+pub(crate) mod chrono_iso8601 {
+    use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
+    use serde::{Deserialize, Serialize, Serializer, de};
+
+    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let value = <&str>::deserialize(deserializer)?;
+        if let Ok(dt_fixed) = DateTime::parse_from_rfc3339(value) {
+            return Ok(dt_fixed.with_timezone(&Utc));
+        }
+
+        if let Ok(date) = NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+            let dt = date.and_hms_opt(0, 0, 0).unwrap();
+            return Ok(Utc.from_utc_datetime(&dt));
+        }
+
+        if let Ok(dt) = NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M") {
+            return Ok(Utc.from_utc_datetime(&dt));
+        }
+
+        Err(de::Error::custom(format!(
+            "failed to parse datetime: {value:?}"
+        )))
+    }
+
+    pub(crate) fn serialize<S>(date_time: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        date_time.serialize(serializer)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, Utc};

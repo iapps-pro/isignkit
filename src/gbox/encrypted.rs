@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn decrypt() {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/gbox/repository.json");
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/test/gbox/repository.json");
         let json = std::fs::read_to_string(path).expect("Can't read file");
 
         let repo: Repository = serde_json::from_str(&json).unwrap();

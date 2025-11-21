@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn decrypt() {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/gbox/kvp.json");
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/test/gbox/kvp.json");
         let encrypted_map = std::fs::read_to_string(path).expect("Can't read file");
 
         let keys_storage = CryptKeysStorage::default();
