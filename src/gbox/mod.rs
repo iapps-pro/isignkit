@@ -2,6 +2,7 @@ pub mod config;
 mod crypt_keys;
 pub mod encrypted;
 mod gbox_link;
+mod installable_app;
 pub mod links_map;
 mod schema;
 mod unencrypted;
@@ -12,6 +13,7 @@ pub use self::{
     config::EncryptedConfig,
     crypt_keys::{CryptKeys, CryptKeysStorage},
     gbox_link::{GboxLink, OptionalGboxLink},
+    installable_app::InstallableApp,
     links_map::{EncryptedLinksMap, LinksMap},
     schema::SchemaVersion,
     unencrypted::*,
