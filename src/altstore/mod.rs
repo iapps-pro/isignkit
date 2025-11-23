@@ -1,16 +1,11 @@
 mod application;
 mod color;
 mod news;
+mod permissions;
 
-pub use self::{
-    application::{
-        Application, Category as AppCategory, Patreon as AppPatreon, Permissions as AppPermissions,
-        Screenshot as AppScreenshot, Version as AppVersion,
-    },
-    color::AltStoreColor,
-    news::NewsItem,
-};
+pub use self::{application::*, color::AltStoreColor, news::NewsItem, permissions::*};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use url::Url;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -64,20 +59,34 @@ pub struct Repository {
 
     /// A list of the News items in the source. The ordering does not matter because
     /// `AltStore` will display them in reverse chronological order according to their date.
-    pub news: Vec<NewsItem>,
+    pub news: Option<Vec<NewsItem>>,
+
+    pub user_info: Option<HashMap<String, String>>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::Result;
+
+    fn read_source(name: &str) -> Result<Repository> {
+        let path = format!("{}/test/altstore/{}", env!("CARGO_MANIFEST_DIR"), name);
+        let json = std::fs::read_to_string(path).expect("Can't read file");
+        serde_json::from_str(&json)
+    }
 
     #[test]
     fn parse() {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/test/altstore/apps.json");
-        let json = std::fs::read_to_string(path).expect("Can't read file");
-
-        let repo: Repository = serde_json::from_str(&json).unwrap();
+        let repo = read_source("apps.json").unwrap();
         assert_eq!(repo.featured_apps.unwrap().len(), 1);
         assert_eq!(repo.apps.len(), 2);
+
+        let repo = read_source("dvntm.json").unwrap();
+        assert_eq!(repo.featured_apps.unwrap().len(), 3);
+        assert_eq!(repo.apps.len(), 6);
+
+        let repo = read_source("flycast.json").unwrap();
+        assert_eq!(repo.apps.len(), 1);
+        assert!(repo.news.is_none());
     }
 }

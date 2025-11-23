@@ -1,4 +1,4 @@
-use super::AltStoreColor;
+use super::{AltStoreColor, OptionalPermissions};
 use crate::serde_support::chrono_iso8601;
 use chrono::{DateTime, Utc};
 pub use codes_iso_4217::CurrencyCode;
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use url::Url;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Application {
     /// The name of your app as it will appear on its store page.
@@ -42,16 +42,17 @@ pub struct Application {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<Category>,
 
-    /// Screenshots of the app.
+    #[serde(rename = "screenshots", alias = "screenshotURLs")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub screenshots: Option<Screenshots>,
+    pub screenshot_asset: Option<ScreenshotAsset>,
 
-    /// An ordered list of all the published versions of your app.
-    pub versions: Vec<Version>,
+    #[serde(flatten)]
+    pub version_asset: VersionAsset,
 
     /// An object listing all entitlements and privacy permissions information used by the app.
     #[serde(rename = "appPermissions")]
-    pub permissions: Permissions,
+    #[serde(skip_serializing_if = "OptionalPermissions::is_none")]
+    pub permissions: OptionalPermissions,
 
     /// An object specifying the required pledge/tiers to download the app.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,7 +62,7 @@ pub struct Application {
     pub beta: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub enum Category {
     Developer,
@@ -75,7 +76,7 @@ pub enum Category {
     Utilities,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Version {
     /// App's version number (`CFBundleShortVersionString`).
@@ -126,28 +127,28 @@ pub struct Version {
     pub maxos_version: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum Screenshots {
+pub enum ScreenshotAsset {
+    Objects(ScreenshotObjects),
+    Urls(Vec<Url>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum ScreenshotObjects {
     Universal(Vec<ScreenshotObject>),
     Individual(HashMap<ScreenshotDevice, Vec<ScreenshotObject>>),
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum ScreenshotDevice {
     Ipad,
     Iphone,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum Screenshot {
-    Link(Url),
-    Object(ScreenshotObject),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotObject {
     /// Link to a screenshot of the app.
@@ -165,18 +166,7 @@ pub struct ScreenshotObject {
     pub height: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct Permissions {
-    /// A list of all entitlements used by the app and its app extensions.
-    pub entitlements: Vec<String>,
-
-    /// A dictionary with all the `UsageDescription` keys in the app's Info.plist
-    /// along with their descriptions.
-    pub privacy: HashMap<String, String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Patreon {
     /// The minimum pledge amount required for download.
@@ -204,4 +194,26 @@ pub struct Patreon {
     /// A user must be a member of one of these tiers to download your app.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tiers: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum VersionAsset {
+    Multiple {
+        versions: Vec<Version>,
+    },
+    Single {
+        version: String,
+
+        #[serde(rename = "versionDate", with = "chrono_iso8601")]
+        date: DateTime<Utc>,
+
+        #[serde(rename = "versionDescription")]
+        description: Option<String>,
+
+        #[serde(rename = "downloadURL")]
+        download_url: Url,
+
+        size: i32,
+    },
 }

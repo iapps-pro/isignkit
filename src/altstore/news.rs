@@ -31,8 +31,8 @@ pub struct NewsItem {
 
     /// When true, `AltStore` will send a push notification about this News item
     /// when it next checks for updates in the background.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notify: Option<bool>,
+    #[serde(skip_serializing_if = "std::ops::Not::not", default)]
+    pub notify: bool,
 
     /// A link that `AltStore` should open when the News item is tapped.
     /// Links will be opened in an in-app web browser.

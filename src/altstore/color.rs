@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[repr(transparent)]
 pub struct AltStoreColor(String);
 
