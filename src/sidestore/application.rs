@@ -1,13 +1,10 @@
-use crate::altstore::{AltStoreColor, OptionalPermissions, Patreon, ScreenshotAsset};
+use crate::altstore::{AltStoreColor, Category, OptionalPermissions, Patreon, ScreenshotAsset};
 use crate::serde_support::chrono_iso8601;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use url::Url;
-
-// Not mapped to AltStore category, can be arbitrary
-pub type Category = String;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]

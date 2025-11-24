@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 pub use codes_iso_4217::CurrencyCode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use strum::{Display, EnumString};
 use url::Url;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -62,8 +63,11 @@ pub struct Application {
     pub beta: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(
+    Serialize, Deserialize, Debug, Default, Clone, Eq, PartialEq, Hash, EnumString, Display,
+)]
 #[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
 pub enum Category {
     Developer,
     Entertainment,

@@ -55,12 +55,15 @@ pub struct Repository {
     pub featured_apps: Option<Vec<String>>,
 
     /// An ordered list of the apps in your source.
-    pub apps: Vec<Application>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub apps: Option<Vec<Application>>,
 
     /// A list of the News items in the source. The ordering does not matter because
-    /// `AltStore` will display them in reverse chronological order according to their date.
+    /// `AltStore` will display them in reverse chronological order according to their date.v
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub news: Option<Vec<NewsItem>>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_info: Option<HashMap<String, String>>,
 }
 
@@ -79,14 +82,14 @@ mod tests {
     fn parse() {
         let repo = read_source("apps.json").unwrap();
         assert_eq!(repo.featured_apps.unwrap().len(), 1);
-        assert_eq!(repo.apps.len(), 2);
+        assert_eq!(repo.apps.unwrap().len(), 2);
 
         let repo = read_source("dvntm.json").unwrap();
         assert_eq!(repo.featured_apps.unwrap().len(), 3);
-        assert_eq!(repo.apps.len(), 6);
+        assert_eq!(repo.apps.unwrap().len(), 6);
 
         let repo = read_source("flycast.json").unwrap();
-        assert_eq!(repo.apps.len(), 1);
+        assert_eq!(repo.apps.unwrap().len(), 1);
         assert!(repo.news.is_none());
     }
 }
