@@ -3,7 +3,7 @@ use crate::CliCommand;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader, PlainReader};
 use anyhow::{Result, anyhow};
 use clap::Parser;
-use ios_signers_types::gbox::{CryptKeys, EncryptedLinksMap, LinksMap, links_map::LinkMapResponse};
+use isignkit::gbox::{CryptKeys, EncryptedLinksMap, LinksMap, links_map::LinkMapResponse};
 use std::path::Path;
 use url::Url;
 

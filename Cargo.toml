@@ -1,5 +1,5 @@
 [package]
-name = "ios-signers-types"
+name = "isignkit"
 version = "0.1.0"
 edition = "2024"
 
@@ -10,7 +10,7 @@ panic = 'abort'
 strip = true
 
 [[bin]]
-name = "sign-util"
+name = "isignkit"
 path = "src/cli/main.rs"
 required-features = ["cli"]
 

@@ -2,7 +2,7 @@ use super::GlobalOptions;
 use crate::CliCommand;
 use anyhow::{Result, anyhow};
 use clap::Parser;
-use ios_signers_types::gbox::config::{GBoxAppType, RemoteConfigRequest, RemoteConfigResponse};
+use isignkit::gbox::config::{GBoxAppType, RemoteConfigRequest, RemoteConfigResponse};
 use reqwest::blocking::Client;
 use serde_json::{Map, Value};
 use std::path::Path;

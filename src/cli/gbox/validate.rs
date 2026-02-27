@@ -3,7 +3,7 @@ use crate::CliCommand;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader};
 use anyhow::Result;
 use clap::Parser;
-use ios_signers_types::gbox::{GboxRepo, SchemaVersion};
+use isignkit::gbox::{GboxRepo, SchemaVersion};
 
 #[derive(Parser)]
 /// Perform repo validation

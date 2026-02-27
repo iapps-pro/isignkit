@@ -14,7 +14,7 @@ use self::{
 };
 use crate::CliCommand;
 use anyhow::{Context, Result};
-use ios_signers_types::gbox::{CryptKeys, CryptKeysStorage};
+use isignkit::gbox::{CryptKeys, CryptKeysStorage};
 use std::path::PathBuf;
 
 // TODO: Refacror when https://github.com/clap-rs/clap/issues/5525 will be closed

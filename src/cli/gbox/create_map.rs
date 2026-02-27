@@ -3,7 +3,7 @@ use crate::CliCommand;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader};
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use ios_signers_types::gbox::{GboxRepo, Repository};
+use isignkit::gbox::{GboxRepo, Repository};
 use std::path::Path;
 
 #[derive(Parser)]

@@ -1389,33 +1389,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ios-signers-types"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
- "boon",
- "chrono",
- "clap",
- "codes-iso-4217",
- "hex",
- "log",
- "md5",
- "obfstr",
- "openssl",
- "reqwest",
- "rncryptor",
- "rocket",
- "schemars",
- "serde",
- "serde_json",
- "simple_logger",
- "strum",
- "url",
- "version-compare",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1447,6 +1420,33 @@ name = "is_terminal_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
+
+[[package]]
+name = "isignkit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "boon",
+ "chrono",
+ "clap",
+ "codes-iso-4217",
+ "hex",
+ "log",
+ "md5",
+ "obfstr",
+ "openssl",
+ "reqwest",
+ "rncryptor",
+ "rocket",
+ "schemars",
+ "serde",
+ "serde_json",
+ "simple_logger",
+ "strum",
+ "url",
+ "version-compare",
+]
 
 [[package]]
 name = "itoa"

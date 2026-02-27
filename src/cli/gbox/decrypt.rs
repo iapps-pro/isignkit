@@ -4,7 +4,7 @@ use crate::gbox::gbox_file::LinkMapReader;
 use crate::input_file::{InputFile, InputFileParser, InputFileReader, PlainReader};
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use ios_signers_types::gbox::{
+use isignkit::gbox::{
     CryptKeys, EncryptedLinksMap, GboxRepo, Repository, SourceProcessor, encrypted,
     links_map::LinkMapResponse,
 };

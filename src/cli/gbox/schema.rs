@@ -1,7 +1,7 @@
 use crate::CliCommand;
 use anyhow::Result;
 use clap::Parser;
-use ios_signers_types::gbox::GboxRepo;
+use isignkit::gbox::GboxRepo;
 
 #[derive(Parser)]
 /// Prints current repository schema

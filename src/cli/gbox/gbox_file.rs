@@ -1,6 +1,6 @@
 use crate::input_file::InputFileReader;
 use chrono::Utc;
-use ios_signers_types::gbox::links_map::LinksMapRequest;
+use isignkit::gbox::links_map::LinksMapRequest;
 use reqwest::{
     blocking::Client,
     header::{HeaderMap, HeaderValue, USER_AGENT},
