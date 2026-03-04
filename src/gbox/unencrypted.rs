@@ -120,7 +120,7 @@ macro_rules! with_item_base {
             #[serde(rename = "forcePPQBypass", skip_serializing_if = "Not::not", default)]
             pub force_ppq_bypass: bool,
 
-            #[serde(rename = "appCateIndex")]
+            #[serde(rename = "appCateIndex", skip_serializing_if = "Option::is_none")]
             pub category_index: Option<UnsignedNumber>,
 
             $($field)*

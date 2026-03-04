@@ -212,7 +212,7 @@ pub enum VersionAsset {
         #[serde(rename = "versionDate", with = "chrono_iso8601")]
         date: DateTime<Utc>,
 
-        #[serde(rename = "versionDescription")]
+        #[serde(rename = "versionDescription", skip_serializing_if = "Option::is_none")]
         description: Option<String>,
 
         #[serde(rename = "downloadURL")]
