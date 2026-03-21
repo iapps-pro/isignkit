@@ -37,7 +37,7 @@ impl GboxRepo {
         schema_for!(Self)
     }
 
-    pub fn validate_and_parse(object: impl AsRef<str>) -> anyhow::Result<Self> {
+    pub fn validate_and_parse(object: impl AsRef<str>) -> Result<Self, crate::error::GboxError> {
         let object = serde_json::from_str::<serde_json::Value>(object.as_ref())?;
         let schema = serde_json::to_value(Self::schema())?;
         validation::validate_object(&object, schema)?;

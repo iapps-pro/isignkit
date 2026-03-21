@@ -1,60 +1,9 @@
-[package]
-name = "isignkit"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = ["isignkit", "isignkit_cli"]
+resolver = "2"
 
 [profile.release]
 lto = true
 codegen-units = 1
 panic = 'abort'
 strip = true
-
-[[bin]]
-name = "isignkit"
-path = "src/cli/main.rs"
-required-features = ["cli"]
-
-[features]
-default = []
-openssl = [
-    "dep:openssl"
-]
-schema = [
-    "dep:schemars",
-    "dep:boon",
-]
-cli = [
-    "dep:clap",
-    "dep:log",
-    "dep:reqwest",
-    "dep:simple_logger",
-    "openssl",
-    "schema",
-]
-rocket = [
-    "dep:rocket",
-]
-
-[dependencies]
-anyhow = "1.0.99"
-base64 = "0.22.1"
-chrono = { version = "0.4.42", features = ["serde"] }
-codes-iso-4217 = { version = "0.1.7", features = ["serde"] }
-hex = "0.4.3"
-md5 = "0.8.0"
-obfstr = "0.4.4"
-rncryptor = { git = "https://github.com/danpashin/rncryptor-rs", rev = "cd83fbe" }
-serde = { version = "1.0.225", features = ["derive"] }
-serde_json = "1.0.145"
-strum = { version = "0.27.1", features = ["derive"] }
-url = { version = "2.5.7", features = ["serde"] }
-version-compare = "0.2.0"
-
-boon = { version = "0.6.1", optional = true }
-clap = { version = "4.5.45", optional = true, features = ["derive"] }
-log = { version = "0.4.28", optional = true }
-openssl = { version = "0.10.73", optional = true }
-reqwest = { version = "0.12.23", features = ["blocking", "json"], optional = true }
-schemars = { version = "1.0.4", features = ["url2"], optional = true }
-simple_logger = { version = "5.0.0", optional = true, features = ["stderr"] }
-rocket = { version = "0.5.1", default-features = false, optional = true }

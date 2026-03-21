@@ -49,7 +49,9 @@ impl PrintMapCommand {
             PlainReader.read_json::<EncryptedLinksMap>(&self.links_map, true)?
         };
 
-        links_map.decrypt(keys)
+        let decrypted = links_map.decrypt(keys)?;
+
+        Ok(decrypted)
     }
 }
 

@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use super::CryptKeys;
-use anyhow::Result;
+use crate::error::GboxError;
 use base64::{Engine as _, prelude::BASE64_STANDARD};
 #[cfg(feature = "openssl")]
 use openssl::{
@@ -48,7 +48,7 @@ impl EncryptedConfig {
     /// and is being decrypted by public one. `rsa` crate doesn't implement this feature
     /// so the only way is to use `OpenSSL`
     #[cfg(feature = "openssl")]
-    pub fn decrypt(&self, keys: &CryptKeys) -> Result<Map<String, Value>> {
+    pub fn decrypt(&self, keys: &CryptKeys) -> Result<Map<String, Value>, GboxError> {
         let decoded = BASE64_STANDARD.decode(&self.app_config)?;
 
         let pubkey = BASE64_STANDARD.decode(&keys.config_pubkey)?;

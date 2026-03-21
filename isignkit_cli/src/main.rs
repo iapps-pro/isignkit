@@ -1,6 +1,11 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::missing_errors_doc, clippy::doc_markdown)]
 
+#[cfg(not(any(feature = "openssl", feature = "openssl-vendored")))]
+compile_error!(
+    "You need to select openssl backend. Available backend features: openssl, openssl-vendored."
+);
+
 mod gbox;
 mod input_file;
 

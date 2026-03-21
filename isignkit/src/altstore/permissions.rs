@@ -63,7 +63,7 @@ impl From<LegacyPermissions> for OptionalPermissions {
 }
 
 #[allow(clippy::unnecessary_wraps, reason = "Serde API")]
-fn deserialize_option<'de, D>(deserializer: D) -> anyhow::Result<Option<Permissions>, D::Error>
+fn deserialize_option<'de, D>(deserializer: D) -> Result<Option<Permissions>, D::Error>
 where
     D: Deserializer<'de>,
 {

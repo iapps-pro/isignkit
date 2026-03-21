@@ -37,7 +37,9 @@ impl GetConfigCommand {
         };
 
         let keys = self.global_options.suitable_keys()?;
-        data.decrypt(&keys)
+        let decrypted = data.decrypt(&keys)?;
+
+        Ok(decrypted)
     }
 }
 

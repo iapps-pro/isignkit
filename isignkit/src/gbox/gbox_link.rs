@@ -1,4 +1,4 @@
-use anyhow::Result;
+use crate::error::GboxError;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, de::Error};
@@ -26,8 +26,10 @@ pub struct OptionalGboxLink(
 );
 
 impl GboxLink {
-    pub fn new_url(url: impl AsRef<str>) -> Result<Self> {
-        Ok(Self::Url(Url::parse(url.as_ref())?))
+    pub fn new_url(url: impl AsRef<str>) -> Result<Self, GboxError> {
+        Ok(Self::Url(
+            Url::parse(url.as_ref()).map_err(GboxError::InvalidUrl)?,
+        ))
     }
 
     pub fn new_digest(id: impl AsRef<str>) -> Self {
@@ -81,7 +83,7 @@ impl GboxLink {
 }
 
 impl OptionalGboxLink {
-    pub fn new_url(url: impl AsRef<str>) -> Result<Self> {
+    pub fn new_url(url: impl AsRef<str>) -> Result<Self, GboxError> {
         Ok(Self(Some(GboxLink::new_url(url)?)))
     }
 

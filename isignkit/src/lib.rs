@@ -8,3 +8,5 @@ pub mod sidestore;
 mod unit_false;
 mod unit_number;
 mod unit_true;
+
+pub mod error;

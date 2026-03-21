@@ -1,4 +1,4 @@
-use anyhow::Context;
+use crate::error::InstallableAppError;
 use base64::{Engine, prelude::BASE64_STANDARD};
 #[cfg(feature = "rocket")]
 use rocket::{
@@ -16,12 +16,12 @@ pub struct InstallableApp {
 
 #[cfg(feature = "rocket")]
 impl<'r> FromSegments<'r> for InstallableApp {
-    type Error = anyhow::Error;
+    type Error = InstallableAppError;
 
     fn from_segments(segments: Segments<'r, Path>) -> Result<Self, Self::Error> {
         let path = segments
             .to_path_buf(false)
-            .map_err(|err| anyhow::anyhow!("{err:?}"))?;
+            .map_err(|_| InstallableAppError::InvalidInputString)?;
 
         let path = path.to_string_lossy();
         Self::from_str(path.as_ref())
@@ -29,26 +29,32 @@ impl<'r> FromSegments<'r> for InstallableApp {
 }
 
 impl FromStr for InstallableApp {
-    type Err = anyhow::Error;
+    type Err = InstallableAppError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let Some(prefix) = s.strip_suffix(".plist").filter(|s| !s.is_empty()) else {
-            return Err(anyhow::anyhow!("Missing `.plist`"));
+            return Err(InstallableAppError::InvalidInputString);
         };
 
         let decoded = BASE64_STANDARD
             .decode(prefix)
-            .with_context(|| format!("{s:?} does not contain base64 gbox string"))?;
+            .map_err(|_| InstallableAppError::InvalidInputString)?;
 
-        let decoded = String::from_utf8(decoded)
-            .with_context(|| format!("{s:?} does not contain base64 gbox string"))?;
+        let decoded =
+            String::from_utf8(decoded).map_err(|_| InstallableAppError::InvalidInputString)?;
 
         let mut parts = decoded.splitn(3, '/').map(ToString::to_string);
 
         Ok(InstallableApp {
-            name: parts.next().ok_or(anyhow::anyhow!("Missing `name`"))?,
-            bundle_identifier: parts.next().ok_or(anyhow::anyhow!("Missing `bundleID`"))?,
-            version: parts.next().ok_or(anyhow::anyhow!("Missing `version`"))?,
+            name: parts
+                .next()
+                .ok_or(InstallableAppError::MissingField("name"))?,
+            bundle_identifier: parts
+                .next()
+                .ok_or(InstallableAppError::MissingField("bundleID"))?,
+            version: parts
+                .next()
+                .ok_or(InstallableAppError::MissingField("version"))?,
         })
     }
 }

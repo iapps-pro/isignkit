@@ -6,8 +6,7 @@ use super::{
     gbox_link::{GboxLink, OptionalGboxLink},
     links_map::LinksMap,
 };
-use crate::unit_number::UnsignedNumber;
-use anyhow::{Result, anyhow};
+use crate::{error::GboxError, unit_number::UnsignedNumber};
 use base64::{Engine, prelude::BASE64_STANDARD};
 #[cfg(feature = "schema")]
 use schemars::{JsonSchema, schema_for};
@@ -175,12 +174,12 @@ with_item_base!(ItemFile, {
 });
 
 impl Repository {
-    pub fn encrypt(self, keys: &CryptKeys) -> Result<encrypted::Repository> {
+    pub fn encrypt(self, keys: &CryptKeys) -> Result<encrypted::Repository, GboxError> {
         let items: Vec<encrypted::Item> = self.applications.into_iter().map(Into::into).collect();
 
         let items = serde_json::to_string(&items)?;
         let items = rncryptor::v3::encrypt(&keys.primary, items.as_bytes())
-            .map_err(|error| anyhow!("{error:?}"))?;
+            .map_err(GboxError::EncryptionFailed)?;
         let items = BASE64_STANDARD.encode(items);
 
         Ok(encrypted::Repository {
@@ -366,7 +365,7 @@ impl Repository {
         schema_for!(Self)
     }
 
-    pub fn validate_and_parse(object: impl AsRef<str>) -> Result<Self> {
+    pub fn validate_and_parse(object: impl AsRef<str>) -> Result<Self, GboxError> {
         let schema = serde_json::to_value(Self::schema())?;
         let object = serde_json::from_str::<serde_json::Value>(object.as_ref())?;
         validate_object(&object, schema)?;

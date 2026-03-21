@@ -5,9 +5,9 @@ use super::{
     gbox_link::{GboxLink, OptionalGboxLink},
     unencrypted::{self, Item as UItem, RepoInfo},
 };
-use crate::unit_number::UnsignedNumber;
-use anyhow::{Result, anyhow};
+use crate::{error::GboxError, unit_number::UnsignedNumber};
 use base64::{Engine, prelude::BASE64_STANDARD};
+use rncryptor::v3::decrypt as rndecrypt;
 #[cfg(feature = "schema")]
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
@@ -130,7 +130,7 @@ with_item_base!(ItemFile, {
 });
 
 impl Repository {
-    pub fn decrypt(self, keys: &CryptKeys) -> Result<unencrypted::Repository> {
+    pub fn decrypt(self, keys: &CryptKeys) -> Result<unencrypted::Repository, GboxError> {
         let items: Vec<Item> = serde_json::from_value(self.decrypt_payload(keys)?)?;
         let items = items.into_iter().map(Into::into).collect();
 
@@ -143,7 +143,7 @@ impl Repository {
     }
 
     #[cfg(feature = "schema")]
-    pub fn validate_items(&self, keys: &CryptKeys) -> Result<()> {
+    pub fn validate_items(&self, keys: &CryptKeys) -> Result<(), GboxError> {
         let items = self.decrypt_payload(keys)?;
         let schema = serde_json::to_value(schema_for!(Vec<Item>))?;
         validate_object(&items, schema)?;
@@ -151,12 +151,10 @@ impl Repository {
         Ok(())
     }
 
-    pub fn decrypt_payload(&self, keys: &CryptKeys) -> Result<serde_json::Value> {
+    pub fn decrypt_payload(&self, keys: &CryptKeys) -> Result<serde_json::Value, GboxError> {
         let items = BASE64_STANDARD.decode(self.applications.as_bytes())?;
 
-        let items = rncryptor::v3::decrypt(&keys.primary, &items)
-            .map_err(|error| anyhow!("Decryption failed: {error:?}"))?;
-
+        let items = rndecrypt(&keys.primary, &items).map_err(GboxError::DecryptionFailed)?;
         let items = serde_json::from_slice(items.as_slice())?;
 
         Ok(items)

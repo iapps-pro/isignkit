@@ -1,6 +1,7 @@
 use super::{CryptKeys, GboxLink};
-use crate::{serde_support::chrono_string_seconds, unit_false::False, unit_true::True};
-use anyhow::{Result, anyhow};
+use crate::{
+    error::GboxError, serde_support::chrono_string_seconds, unit_false::False, unit_true::True,
+};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use chrono::{DateTime, Utc};
 use rncryptor::v3::{decrypt as rndecrypt, encrypt as rnencrypt};
@@ -58,7 +59,7 @@ impl LinksMap {
         Self(HashMap::new())
     }
 
-    pub fn from_encrypted(str: impl AsRef<str>, keys: &CryptKeys) -> Result<Self> {
+    pub fn from_encrypted(str: impl AsRef<str>, keys: &CryptKeys) -> Result<Self, GboxError> {
         let encrypted: EncryptedLinksMap = serde_json::from_str(str.as_ref())?;
         encrypted.decrypt(keys)
     }
@@ -74,11 +75,11 @@ impl LinksMap {
         self.0.get(digest.as_ref())
     }
 
-    pub fn encrypt(&self, keys: &CryptKeys) -> Result<EncryptedLinksMap> {
+    pub fn encrypt(&self, keys: &CryptKeys) -> Result<EncryptedLinksMap, GboxError> {
         let mapping = serde_json::to_vec(&self)?;
         let mapping_hash = hex::encode(*md5::compute(&mapping));
 
-        let payload = rnencrypt(&keys.links_map, &mapping).map_err(|error| anyhow!("{error:?}"))?;
+        let payload = rnencrypt(&keys.links_map, &mapping).map_err(GboxError::EncryptionFailed)?;
         let links_map = BASE64_STANDARD.encode(payload);
 
         Ok(EncryptedLinksMap {
@@ -89,9 +90,9 @@ impl LinksMap {
 }
 
 impl EncryptedLinksMap {
-    pub fn decrypt(&self, keys: &CryptKeys) -> Result<LinksMap> {
+    pub fn decrypt(&self, keys: &CryptKeys) -> Result<LinksMap, GboxError> {
         let payload = BASE64_STANDARD.decode(&self.links_map)?;
-        let payload = rndecrypt(&keys.links_map, &payload).map_err(|error| anyhow!("{error:?}"))?;
+        let payload = rndecrypt(&keys.links_map, &payload).map_err(GboxError::DecryptionFailed)?;
 
         let map = serde_json::from_slice(&payload)?;
 
@@ -125,20 +126,20 @@ where
 }
 
 impl LinksMapRequest {
-    pub fn encrypt(&self, repo_url: &Url) -> Result<String> {
+    pub fn encrypt(&self, repo_url: &Url) -> Result<String, GboxError> {
         let password = hex::encode(*md5::compute(repo_url.as_str()));
 
         let request = serde_json::to_vec(&self)?;
-        let request = rnencrypt(&password, &request).map_err(|error| anyhow!("{error:?}"))?;
+        let request = rnencrypt(&password, &request).map_err(GboxError::EncryptionFailed)?;
 
         Ok(BASE64_STANDARD.encode(request))
     }
 
-    pub fn decrypt(encrypted: impl AsRef<str>, repo_url: &Url) -> Result<Self> {
+    pub fn decrypt(encrypted: impl AsRef<str>, repo_url: &Url) -> Result<Self, GboxError> {
         let password = hex::encode(*md5::compute(repo_url.as_str()));
 
         let encrypted = BASE64_STANDARD.decode(encrypted.as_ref())?;
-        let decrypted = rndecrypt(&password, &encrypted).map_err(|error| anyhow!("{error:?}"))?;
+        let decrypted = rndecrypt(&password, &encrypted).map_err(GboxError::DecryptionFailed)?;
 
         let request = serde_json::from_slice(&decrypted)?;
         Ok(request)
