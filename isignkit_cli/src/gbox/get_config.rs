@@ -33,7 +33,7 @@ impl GetConfigCommand {
             .json::<RemoteConfigResponse>()?;
 
         let RemoteConfigResponse::Success { data } = response else {
-            return Err(anyhow!("Got invalid response: {:#?}", response));
+            return Err(anyhow!("Got invalid response: {response:#?}"));
         };
 
         let keys = self.global_options.suitable_keys()?;
