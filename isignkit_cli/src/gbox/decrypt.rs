@@ -1,7 +1,7 @@
 use super::{GlobalOptions, gbox_file::RepoReader};
 use crate::CliCommand;
 use crate::gbox::gbox_file::LinkMapReader;
-use crate::input_file::{InputFile, InputFileParser, InputFileReader, PlainReader};
+use crate::input_file::{InputFile, InputFileParser, InputFileReader, Reader};
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use isignkit::gbox::{
@@ -96,7 +96,7 @@ impl DecryptCommand {
                 LinkMapResponse::Error { error, .. } => return Err(anyhow!("{error}")),
             }
         } else {
-            PlainReader.read_json::<EncryptedLinksMap>(&links_map, false)?
+            Reader.read_json::<EncryptedLinksMap>(&links_map, false)?
         };
 
         if links_map.mapping_hash.as_str() != unlock_hash {

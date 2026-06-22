@@ -6,7 +6,9 @@ use super::{
     gbox_link::{GboxLink, OptionalGboxLink},
     links_map::LinksMap,
 };
-use crate::{error::GboxError, unit_number::UnsignedNumber};
+use crate::{
+    altstore, error::ConversionError, error::GboxError, sidestore, unit_number::UnsignedNumber,
+};
 use base64::{Engine, prelude::BASE64_STANDARD};
 #[cfg(feature = "schema")]
 use schemars::{JsonSchema, schema_for};
@@ -372,6 +374,74 @@ impl Repository {
 
         let repo = serde_json::from_value(object)?;
         Ok(repo)
+    }
+}
+
+impl TryFrom<altstore::Application> for ItemApplication {
+    type Error = ConversionError;
+
+    fn try_from(app: altstore::Application) -> Result<Self, Self::Error> {
+        let newest_url = app
+            .version_asset
+            .url_for_newest()
+            .ok_or(ConversionError::MissingVersionAsset)?;
+        let newest_version = app
+            .version_asset
+            .newest_version_str()
+            .ok_or(ConversionError::MissingVersionAsset)?;
+        let newest_date = app
+            .version_asset
+            .date_for_newest()
+            .ok_or(ConversionError::MissingVersionAsset)?;
+
+        Ok(Self {
+            name: app.name,
+            description: app.localized_description,
+            version: Some(newest_version.clone()),
+            image: OptionalGboxLink(Some(GboxLink::Url(app.icon_url))),
+            update_time: newest_date.to_rfc3339(),
+            password_locked: false,
+            hide_until_unlocked: false,
+            detailed_info: None,
+            force_ppq_bypass: false,
+            category_index: None,
+            link: Some(GboxLink::Url(newest_url.clone())),
+            ext_info_link: None,
+        })
+    }
+}
+
+impl TryFrom<sidestore::Application> for ItemApplication {
+    type Error = ConversionError;
+
+    fn try_from(app: sidestore::Application) -> Result<Self, Self::Error> {
+        let newest_url = app
+            .download_asset
+            .url_for_newest()
+            .ok_or(ConversionError::MissingVersionAsset)?;
+        let newest_version = app
+            .download_asset
+            .newest_version_str()
+            .ok_or(ConversionError::MissingVersionAsset)?;
+        let newest_date = app
+            .download_asset
+            .date_for_newest()
+            .ok_or(ConversionError::MissingVersionAsset)?;
+
+        Ok(Self {
+            name: app.name,
+            description: app.localized_description,
+            version: Some(newest_version.clone()),
+            image: OptionalGboxLink(Some(GboxLink::Url(app.icon_url))),
+            update_time: newest_date.to_rfc3339(),
+            password_locked: false,
+            hide_until_unlocked: false,
+            detailed_info: None,
+            force_ppq_bypass: false,
+            category_index: None,
+            link: Some(GboxLink::Url(newest_url.clone())),
+            ext_info_link: None,
+        })
     }
 }
 

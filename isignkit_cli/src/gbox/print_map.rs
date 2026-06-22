@@ -1,6 +1,6 @@
 use super::{GlobalOptions, gbox_file::LinkMapReader};
 use crate::CliCommand;
-use crate::input_file::{InputFile, InputFileParser, InputFileReader, PlainReader};
+use crate::input_file::{InputFile, InputFileParser, InputFileReader, Reader};
 use anyhow::{Result, anyhow};
 use clap::Parser;
 use isignkit::gbox::{CryptKeys, EncryptedLinksMap, LinksMap, links_map::LinkMapResponse};
@@ -46,7 +46,7 @@ impl PrintMapCommand {
                 LinkMapResponse::Error { error, .. } => return Err(anyhow!("{error}")),
             }
         } else {
-            PlainReader.read_json::<EncryptedLinksMap>(&self.links_map, true)?
+            Reader.read_json::<EncryptedLinksMap>(&self.links_map, true)?
         };
 
         let decrypted = links_map.decrypt(keys)?;

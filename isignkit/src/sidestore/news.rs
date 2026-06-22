@@ -1,4 +1,4 @@
-use crate::altstore::AltStoreColor;
+use crate::altstore::{self, AltStoreColor};
 use crate::serde_support::chrono_iso8601;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -33,4 +33,20 @@ pub struct NewsItem {
 
     #[serde(skip_serializing_if = "std::ops::Not::not", default)]
     pub notify: bool,
+}
+
+impl From<altstore::NewsItem> for NewsItem {
+    fn from(item: altstore::NewsItem) -> Self {
+        Self {
+            identifier: item.identifier,
+            date: item.date,
+            title: item.title,
+            caption: item.caption,
+            tint_color: item.tint_color,
+            image_url: item.image_url,
+            external_url: None,
+            app_id: item.app_id,
+            notify: item.notify,
+        }
+    }
 }

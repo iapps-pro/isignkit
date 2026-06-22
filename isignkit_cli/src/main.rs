@@ -6,6 +6,7 @@ compile_error!(
     "You need to select openssl backend. Available backend features: openssl, openssl-vendored."
 );
 
+mod convert;
 mod gbox;
 mod input_file;
 
@@ -20,6 +21,7 @@ trait CliCommand {
 enum Command {
     #[clap(subcommand)]
     Gbox(gbox::GBoxCommand),
+    Convert(convert::ConvertCommand),
 }
 
 #[derive(Parser)]
@@ -38,6 +40,7 @@ fn main() -> Result<()> {
 
     match cli_options.command {
         Command::Gbox(command) => command.run()?,
+        Command::Convert(command) => command.run()?,
     }
 
     Ok(())

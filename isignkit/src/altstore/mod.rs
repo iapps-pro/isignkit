@@ -4,6 +4,7 @@ mod news;
 mod permissions;
 
 pub use self::{application::*, color::AltStoreColor, news::NewsItem, permissions::*};
+use super::{gbox, sidestore};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use url::Url;
@@ -65,6 +66,64 @@ pub struct Repository {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_info: Option<HashMap<String, String>>,
+}
+
+impl From<gbox::GboxRepo> for Repository {
+    fn from(gbox: gbox::GboxRepo) -> Self {
+        let info = gbox.general_info();
+
+        let mut repo = Self {
+            name: info.name.clone(),
+            subtitle: None,
+            description: None,
+            icon_url: info.icon_image_url.parse().ok(),
+            header_url: None,
+            website: Some(info.link_url.clone()),
+            fedi_username: None,
+            patreon_url: None,
+            tint_color: None,
+            featured_apps: None,
+            apps: None,
+            news: None,
+            user_info: None,
+        };
+
+        if let gbox::GboxRepo::Plain(gbox) = gbox {
+            let apps = gbox
+                .applications
+                .into_iter()
+                .flat_map(TryInto::try_into)
+                .collect();
+
+            repo.apps = Some(apps);
+        }
+
+        repo
+    }
+}
+
+impl From<sidestore::Repository> for Repository {
+    fn from(sidestore: sidestore::Repository) -> Self {
+        Self {
+            name: sidestore.name,
+            subtitle: sidestore.subtitle,
+            description: sidestore.description,
+            icon_url: sidestore.icon_url,
+            header_url: sidestore.header_image_url,
+            website: sidestore.website,
+            fedi_username: None,
+            patreon_url: None,
+            tint_color: sidestore.tint_color,
+            featured_apps: sidestore.featured_apps,
+            apps: sidestore
+                .apps
+                .map(|apps| apps.into_iter().flat_map(TryInto::try_into).collect()),
+            news: sidestore
+                .news
+                .map(|apps| apps.into_iter().flat_map(TryInto::try_into).collect()),
+            user_info: None,
+        }
+    }
 }
 
 #[cfg(test)]

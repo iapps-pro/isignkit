@@ -44,3 +44,16 @@ pub enum AltstoreError {
     #[error("{0} is not a valid hex color.")]
     InvalidHexColor(String),
 }
+
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum ConversionError {
+    #[error("This item in unsupported in selected conversion.")]
+    UnsupportedItemType,
+
+    #[error("URL is missed or invalid for this conversion.")]
+    InvalidOrMissingUrl,
+
+    #[error("Version asset is missed.")]
+    MissingVersionAsset,
+}

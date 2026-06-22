@@ -81,5 +81,13 @@ pub(crate) trait InputFileReader {
     }
 }
 
-pub(crate) struct PlainReader;
-impl InputFileReader for PlainReader {}
+pub(crate) struct Reader;
+impl InputFileReader for Reader {
+    fn read_remote(&self, url: &Url) -> anyhow::Result<String> {
+        let client = reqwest::blocking::Client::new();
+        let response = client.get(url.as_str()).send()?;
+        let data = response.error_for_status()?.text()?;
+
+        Ok(data)
+    }
+}

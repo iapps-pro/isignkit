@@ -22,7 +22,7 @@ pub struct OptionalGboxLink(
         deserialize_with = "deserialize_option",
         skip_serializing_if = "Option::is_none"
     )]
-    Option<GboxLink>,
+    pub Option<GboxLink>,
 );
 
 impl GboxLink {
@@ -41,6 +41,14 @@ impl GboxLink {
 
     #[must_use]
     pub fn as_url(&self) -> Option<&Url> {
+        match self {
+            Self::Url(url) => Some(url),
+            Self::Digest(_) => None,
+        }
+    }
+
+    #[must_use]
+    pub fn into_url(self) -> Option<Url> {
         match self {
             Self::Url(url) => Some(url),
             Self::Digest(_) => None,

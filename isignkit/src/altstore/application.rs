@@ -1,5 +1,5 @@
 use super::{AltStoreColor, OptionalPermissions};
-use crate::serde_support::chrono_iso8601;
+use crate::{error::ConversionError, gbox, serde_support::chrono_iso8601, sidestore};
 use chrono::{DateTime, Utc};
 pub use codes_iso_4217::CurrencyCode;
 use serde::{Deserialize, Serialize};
@@ -220,4 +220,161 @@ pub enum VersionAsset {
 
         size: i32,
     },
+}
+
+impl VersionAsset {
+    #[must_use]
+    pub fn date_for_newest(&self) -> Option<DateTime<Utc>> {
+        match self {
+            Self::Multiple { versions } => versions.iter().map(|vers| vers.date).max(),
+            Self::Single { date, .. } => Some(*date),
+        }
+    }
+
+    #[must_use]
+    pub fn url_for_newest(&self) -> Option<&Url> {
+        match self {
+            Self::Multiple { versions } => versions
+                .iter()
+                .max_by_key(|vers| vers.date)
+                .map(|vers| &vers.download_url),
+            Self::Single { download_url, .. } => Some(download_url),
+        }
+    }
+
+    #[must_use]
+    pub fn newest_version_str(&self) -> Option<&String> {
+        match self {
+            Self::Multiple { versions } => versions
+                .iter()
+                .max_by_key(|vers| vers.date)
+                .map(|vers| &vers.version),
+            Self::Single { version, .. } => Some(version),
+        }
+    }
+}
+
+impl TryFrom<gbox::Item> for Application {
+    type Error = ConversionError;
+
+    fn try_from(item: gbox::Item) -> Result<Self, Self::Error> {
+        let (gbox::Item::SelfSign(app)
+        | gbox::Item::EnterpriseSign(app)
+        | gbox::Item::AppWithoutSign(app)) = item
+        else {
+            return Err(ConversionError::UnsupportedItemType);
+        };
+
+        Self::try_from(app)
+    }
+}
+
+impl TryFrom<gbox::ItemApplication> for Application {
+    type Error = ConversionError;
+
+    fn try_from(app_item: gbox::ItemApplication) -> Result<Self, Self::Error> {
+        let icon_link = app_item.image.0;
+        let icon_url = icon_link
+            .and_then(gbox::GboxLink::into_url)
+            .unwrap_or_else(|| "https://example.com".parse().unwrap());
+
+        let update_dt = DateTime::parse_from_rfc3339(&app_item.update_time)
+            .map_or_else(|_| Utc::now(), |dt| dt.to_utc());
+
+        let version = VersionAsset::Single {
+            version: app_item.version.unwrap_or_default(),
+            date: update_dt,
+            description: None,
+            download_url: app_item
+                .link
+                .and_then(gbox::GboxLink::into_url)
+                .ok_or(ConversionError::InvalidOrMissingUrl)?,
+            size: 0,
+        };
+
+        Ok(Application {
+            name: app_item.name,
+            bundle_identifier: "org.example.app".to_string(),
+            marketplace_id: None,
+            developer_name: String::new(),
+            subtitle: None,
+            localized_description: app_item.description,
+            icon_url,
+            tint_color: None,
+            category: None,
+            screenshot_asset: None,
+            version_asset: version,
+            permissions: OptionalPermissions(None),
+            patreon: None,
+            beta: false,
+        })
+    }
+}
+
+impl From<sidestore::Version> for Version {
+    fn from(sidestore_vers: sidestore::Version) -> Self {
+        Self {
+            version: sidestore_vers.version,
+            build_version: sidestore_vers.build_version,
+            marketing_version: None,
+            date: sidestore_vers.date,
+            localized_description: sidestore_vers.localized_description,
+            download_url: sidestore_vers.download_url,
+            size: sidestore_vers.size,
+            sha256: sidestore_vers.sha256,
+            assets_urls: None,
+            minos_version: sidestore_vers.minos_version,
+            maxos_version: sidestore_vers.maxos_version,
+        }
+    }
+}
+
+impl TryFrom<sidestore::DownloadAsset> for VersionAsset {
+    type Error = ConversionError;
+
+    fn try_from(sidestore_asset: sidestore::DownloadAsset) -> Result<Self, Self::Error> {
+        match sidestore_asset {
+            sidestore::DownloadAsset::Tracks { .. } => Err(ConversionError::MissingVersionAsset),
+            sidestore::DownloadAsset::SingleVersion {
+                version,
+                date,
+                description,
+                download_url,
+                size,
+            } => Ok(Self::Single {
+                version,
+                date,
+                description,
+                download_url,
+                size,
+            }),
+            sidestore::DownloadAsset::Multiple { versions } => {
+                let versions = versions.into_iter().map(Into::into).collect();
+                Ok(Self::Multiple { versions })
+            }
+        }
+    }
+}
+
+impl TryFrom<sidestore::Application> for Application {
+    type Error = ConversionError;
+
+    fn try_from(app: sidestore::Application) -> Result<Self, Self::Error> {
+        Ok(Application {
+            name: app.name,
+            bundle_identifier: app.bundle_identifier,
+            marketplace_id: app.marketplace_id,
+            developer_name: app.developer_name,
+            subtitle: app.subtitle,
+            localized_description: app.localized_description,
+            icon_url: app.icon_url,
+            tint_color: app.tint_color,
+            category: app.category,
+            screenshot_asset: app.screenshot_asset,
+            version_asset: app.download_asset.try_into()?,
+            permissions: app.permissions,
+            patreon: None,
+            beta: app.beta,
+        })
+    }
 }

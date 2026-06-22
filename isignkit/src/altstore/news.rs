@@ -1,5 +1,5 @@
 use super::AltStoreColor;
-use crate::serde_support::chrono_iso8601;
+use crate::{serde_support::chrono_iso8601, sidestore};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -44,4 +44,20 @@ pub struct NewsItem {
     #[serde(rename = "appID")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub app_id: Option<String>,
+}
+
+impl From<sidestore::NewsItem> for NewsItem {
+    fn from(item: sidestore::NewsItem) -> Self {
+        Self {
+            title: item.title,
+            identifier: item.identifier,
+            caption: item.caption,
+            date: item.date,
+            tint_color: item.tint_color,
+            image_url: item.image_url,
+            notify: item.notify,
+            url: None,
+            app_id: item.app_id,
+        }
+    }
 }
