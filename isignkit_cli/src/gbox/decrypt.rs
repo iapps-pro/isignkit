@@ -96,7 +96,8 @@ impl DecryptCommand {
                 LinkMapResponse::Error { error, .. } => return Err(anyhow!("{error}")),
             }
         } else {
-            Reader.read_json::<EncryptedLinksMap>(&links_map, false)?
+            let reader = Reader::new();
+            reader.read_json::<EncryptedLinksMap>(&links_map, false)?
         };
 
         if links_map.mapping_hash.as_str() != unlock_hash {

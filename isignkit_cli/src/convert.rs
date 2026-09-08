@@ -14,6 +14,16 @@ enum Format {
     Gbox,
 }
 
+impl Format {
+    fn useragent(&self) -> &str {
+        match self {
+            Self::Altstore => "AltStore/1.0",
+            Self::Sidestore => "SideStore/1.0",
+            Self::Gbox => "GBox/1.0",
+        }
+    }
+}
+
 /// Converts apps repository into between different backends
 ///
 /// Since these backends use their own formats and datatypes, some data can be lost.
@@ -40,7 +50,8 @@ pub(crate) struct ConvertCommand {
 
 impl super::CliCommand for ConvertCommand {
     fn run(&self) -> Result<()> {
-        let input = Reader.read_to_string(&self.source, false)?;
+        let reader = Reader::with_useragent(self.source_format.useragent())?;
+        let input = reader.read_to_string(&self.source, false)?;
 
         let repo = AnyRepository::new(&input, self.source_format)?;
         let apps_cnt_before = repo.apps_count();

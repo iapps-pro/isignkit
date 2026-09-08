@@ -46,7 +46,8 @@ impl PrintMapCommand {
                 LinkMapResponse::Error { error, .. } => return Err(anyhow!("{error}")),
             }
         } else {
-            Reader.read_json::<EncryptedLinksMap>(&self.links_map, true)?
+            let reader = Reader::new();
+            reader.read_json::<EncryptedLinksMap>(&self.links_map, true)?
         };
 
         let decrypted = links_map.decrypt(keys)?;

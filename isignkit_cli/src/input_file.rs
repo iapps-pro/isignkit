@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use clap::{Arg, Error};
+use reqwest::blocking::Client;
 use serde::de::DeserializeOwned;
 use std::{
     ffi::OsStr,
@@ -81,11 +82,27 @@ pub(crate) trait InputFileReader {
     }
 }
 
-pub(crate) struct Reader;
+pub(crate) struct Reader {
+    pub(crate) client: Client,
+}
+
+impl Reader {
+    pub(crate) fn new() -> Self {
+        Self {
+            client: Client::new(),
+        }
+    }
+
+    pub(crate) fn with_useragent(ua: &str) -> anyhow::Result<Self> {
+        Ok(Self {
+            client: Client::builder().user_agent(ua).build()?,
+        })
+    }
+}
+
 impl InputFileReader for Reader {
     fn read_remote(&self, url: &Url) -> anyhow::Result<String> {
-        let client = reqwest::blocking::Client::new();
-        let response = client.get(url.as_str()).send()?;
+        let response = self.client.get(url.as_str()).send()?;
         let data = response.error_for_status()?.text()?;
 
         Ok(data)
