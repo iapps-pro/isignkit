@@ -1,3 +1,5 @@
+use serde::de;
+
 pub(crate) mod chrono_string_seconds {
     use chrono::{DateTime, Utc};
     use serde::{Deserialize, Serialize, Serializer, de};
@@ -56,6 +58,15 @@ pub(crate) mod chrono_iso8601 {
     {
         date_time.serialize(serializer)
     }
+}
+
+#[allow(clippy::unnecessary_wraps, reason = "serde requires such signature")]
+pub(crate) fn de_optional<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: de::Deserializer<'de>,
+    T: de::Deserialize<'de>,
+{
+    Ok(T::deserialize(deserializer).ok())
 }
 
 #[cfg(test)]

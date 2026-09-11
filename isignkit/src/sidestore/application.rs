@@ -1,7 +1,11 @@
 use crate::altstore::{
     self, AltStoreColor, Category, OptionalPermissions, Patreon, ScreenshotAsset,
 };
-use crate::{error::ConversionError, gbox, serde_support::chrono_iso8601};
+use crate::{
+    error::ConversionError,
+    gbox,
+    serde_support::{chrono_iso8601, de_optional},
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -32,7 +36,11 @@ pub struct Application {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tint_color: Option<AltStoreColor>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "de_optional",
+        default
+    )]
     pub category: Option<Category>,
 
     #[serde(rename = "screenshots", alias = "screenshotURLs")]

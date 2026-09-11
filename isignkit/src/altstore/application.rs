@@ -1,5 +1,10 @@
 use super::{AltStoreColor, OptionalPermissions};
-use crate::{error::ConversionError, gbox, serde_support::chrono_iso8601, sidestore};
+use crate::{
+    error::ConversionError,
+    gbox,
+    serde_support::{chrono_iso8601, de_optional},
+    sidestore,
+};
 use chrono::{DateTime, Utc};
 pub use codes_iso_4217::CurrencyCode;
 use serde::{Deserialize, Serialize};
@@ -40,7 +45,11 @@ pub struct Application {
     pub tint_color: Option<AltStoreColor>,
 
     /// The store category best representing your app.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "de_optional",
+        default
+    )]
     pub category: Option<Category>,
 
     #[serde(rename = "screenshots", alias = "screenshotURLs")]

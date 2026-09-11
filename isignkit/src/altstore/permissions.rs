@@ -1,4 +1,5 @@
-use serde::{Deserialize, Deserializer, Serialize};
+use crate::serde_support::de_optional;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -31,7 +32,7 @@ pub enum Permissions {
 #[serde(transparent)]
 pub struct OptionalPermissions(
     #[serde(
-        deserialize_with = "deserialize_option",
+        deserialize_with = "de_optional",
         skip_serializing_if = "Option::is_none"
     )]
     pub Option<Permissions>,
@@ -60,12 +61,4 @@ impl From<LegacyPermissions> for OptionalPermissions {
     fn from(permissions: LegacyPermissions) -> Self {
         OptionalPermissions(Some(Permissions::Legacy(permissions)))
     }
-}
-
-#[allow(clippy::unnecessary_wraps, reason = "Serde API")]
-fn deserialize_option<'de, D>(deserializer: D) -> Result<Option<Permissions>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Ok(Permissions::deserialize(deserializer).ok())
 }
